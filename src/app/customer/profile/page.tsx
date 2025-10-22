@@ -3,7 +3,7 @@
 import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Button, LinkButton } from "@/components/button"
+import { Button, LinkButton } from "@/components/ui/Button"
 
 export default function ProfilePage() {
     const { user, token, isAuthenticated, logout } = useAuth()

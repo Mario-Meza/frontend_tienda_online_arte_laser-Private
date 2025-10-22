@@ -6,7 +6,7 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Button } from "@/components/button"
+import { Button } from "@/components/ui/Button"
 
 export default function RegisterPage() {
     const [email, setEmail] = useState("")

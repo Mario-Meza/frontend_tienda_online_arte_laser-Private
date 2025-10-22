@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useCart } from "@/context/cart-context"
 import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/button"
+import { Button } from "@/components/ui/Button"
 
 interface Product {
     _id: string

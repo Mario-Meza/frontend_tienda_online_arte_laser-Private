@@ -8,6 +8,7 @@ interface User {
     email: string
     name: string
     phone?: string
+    role: 'admin' | 'customer' // ✅ Agregar role
 }
 
 interface AuthContextType {
@@ -18,6 +19,7 @@ interface AuthContextType {
     logout: () => void
     register: (email: string, password: string, name: string) => Promise<void>
     isAuthenticated: boolean
+    isAdmin: boolean // ✅ Helper para verificar si es admin
     refreshUser: () => Promise<void>
 }
 
@@ -31,62 +33,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // ✅ Función para obtener datos del usuario actual
     const fetchCurrentUser = async (authToken: string) => {
         try {
-            // Decodificar el token para obtener el email (sin verificar en el frontend)
             const tokenParts = authToken.split('.')
             if (tokenParts.length !== 3) {
                 console.error("Token mal formado")
-                setToken(null)
-                setUser(null)
-                localStorage.removeItem("auth_token")
+                clearAuth()
                 return
             }
 
             const payload = JSON.parse(atob(tokenParts[1]))
             const userEmail = payload.sub
+            const userRole = payload.role || 'customer' // ✅ Obtener role del token
 
             if (!userEmail) {
                 console.error("Token no contiene email (sub)")
-                setToken(null)
-                setUser(null)
-                localStorage.removeItem("auth_token")
+                clearAuth()
                 return
             }
 
-            // Obtener todos los customers y buscar el actual
-            const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers`, {
+            // ✅ Usar endpoint /auth/me en lugar de listar todos los customers
+            const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`, {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
                 },
             })
 
             if (userResponse.ok) {
-                const customers = await userResponse.json()
-                const currentUser = customers.find((c: any) => c.email === userEmail)
+                const currentUser = await userResponse.json()
 
-                if (currentUser) {
-                    setUser(currentUser)
-                    return currentUser
-                } else {
-                    console.error("Usuario no encontrado en la base de datos")
-                    setToken(null)
-                    setUser(null)
-                    localStorage.removeItem("auth_token")
-                }
+                setUser({
+                    ...currentUser,
+                    _id: currentUser.id || currentUser._id, // Normalizar ID
+                    role: userRole // ✅ Usar role del token (más confiable)
+                })
+                return currentUser
             } else if (userResponse.status === 401) {
                 console.warn("Token expirado o inválido. Cerrando sesión...")
-                setToken(null)
-                setUser(null)
-                localStorage.removeItem("auth_token")
+                clearAuth()
             } else {
                 console.error("Error del servidor al obtener usuario:", userResponse.status)
             }
         } catch (error) {
             console.error("Error al obtener usuario:", error)
-            // En caso de error al decodificar o red, limpiar sesión por seguridad
-            setToken(null)
-            setUser(null)
-            localStorage.removeItem("auth_token")
+            clearAuth()
         }
+    }
+
+    // ✅ Función helper para limpiar autenticación
+    const clearAuth = () => {
+        setToken(null)
+        setUser(null)
+        localStorage.removeItem("auth_token")
     }
 
     // ✅ Cargar token y usuario del localStorage al montar
@@ -103,7 +99,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         initAuth()
     }, [])
 
-    // ✅ Función pública para refrescar usuario
     const refreshUser = async () => {
         if (token) {
             await fetchCurrentUser(token)
@@ -130,9 +125,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const data = await response.json()
             setToken(data.access_token)
             localStorage.setItem("auth_token", data.access_token)
-
-            // Obtener datos del usuario
             await fetchCurrentUser(data.access_token)
+
+            // ✅ Agregar esto para forzar re-render
+            window.location.reload()
+
         } catch (error) {
             console.error("Error en login:", error)
             throw error
@@ -144,10 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const register = async (email: string, password: string, name: string) => {
         setIsLoading(true)
         try {
-            console.log("Registrando usuario:", { email, name })
-            const registerUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/register`
-
-            const response = await fetch(registerUrl, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/register`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -163,8 +157,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 let errorMessage = "Error al registrar"
                 try {
                     const errorData = await response.json()
-                    console.error("Error del servidor:", errorData)
-
                     if (errorData.detail) {
                         if (typeof errorData.detail === 'string') {
                             errorMessage = errorData.detail
@@ -175,17 +167,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         errorMessage = errorData.message
                     }
                 } catch (e) {
-                    console.error("No se pudo parsear el error:", e)
                     errorMessage = `Error al registrar (${response.status})`
                 }
-
                 throw new Error(errorMessage)
             }
 
-            const newUser = await response.json()
-            console.log("Usuario registrado:", newUser)
-
-            // Auto-login después del registro
             await login(email, password)
         } catch (error) {
             console.error("Error en registro:", error)
@@ -197,10 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const logout = () => {
         console.log("👋 Cerrando sesión...")
-        setUser(null)
-        setToken(null)
-        localStorage.removeItem("auth_token")
-        // No limpiar el carrito aquí, se limpiará automáticamente en cart-context cuando user sea null
+        clearAuth()
     }
 
     return (
@@ -214,6 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 register,
                 refreshUser,
                 isAuthenticated: !!token && !!user,
+                isAdmin: user?.role === 'admin' // ✅ Helper para verificar admin
             }}
         >
             {children}
