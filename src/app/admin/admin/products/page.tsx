@@ -39,9 +39,11 @@ export default function ProductsPage() {
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products`)
                 if (!response.ok) throw new Error("Error al cargar productos")
                 const data = await response.json()
-                setProducts(data)
+                // ✅ Asegurar que siempre sea un array
+                setProducts(Array.isArray(data) ? data : [])
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Error desconocido")
+                setProducts([]) // ✅ En caso de error, establecer array vacío
             } finally {
                 setLoading(false)
             }
@@ -101,7 +103,10 @@ export default function ProductsPage() {
         })
     }
 
-    const categories = ['all', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))]
+    // ✅ Validar que products sea un array antes de usar .map()
+    const categories = ['all', ...Array.from(new Set(
+        Array.isArray(products) ? products.map(p => p.category).filter(Boolean) : []
+    ))]
 
     const filteredProducts = selectedCategory === 'all'
         ? products
@@ -282,9 +287,8 @@ export default function ProductsPage() {
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex flex-col md:flex-row h-full max-h-[90vh]">
-                            {/* Galería de imágenes - scroll horizontal */}
+                            {/* Galería de imágenes */}
                             <div className="md:w-1/2 bg-gray-100 relative">
-                                {/* Imagen principal */}
                                 <div className="h-96 md:h-full flex items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
                                     <img
                                         src={getProductImages(selectedProduct)[currentImageIndex]}
@@ -293,7 +297,6 @@ export default function ProductsPage() {
                                     />
                                 </div>
 
-                                {/* Miniaturas scroll horizontal */}
                                 {getProductImages(selectedProduct).length > 1 && (
                                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
                                         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -318,7 +321,6 @@ export default function ProductsPage() {
                                     </div>
                                 )}
 
-                                {/* Botón cerrar */}
                                 <button
                                     onClick={closeProductDetails}
                                     className="absolute top-4 right-4 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all"
@@ -331,19 +333,16 @@ export default function ProductsPage() {
 
                             {/* Información del producto */}
                             <div className="md:w-1/2 p-8 overflow-y-auto">
-                                {/* Categoría */}
                                 {selectedProduct.category && (
                                     <span className="inline-block px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold uppercase tracking-wide mb-4">
                                         {selectedProduct.category}
                                     </span>
                                 )}
 
-                                {/* Nombre */}
                                 <h2 className="text-3xl font-bold text-gray-900 mb-4">
                                     {selectedProduct.name}
                                 </h2>
 
-                                {/* Precio */}
                                 <div className="mb-6">
                                     <div className="flex items-baseline gap-2">
                                         <span className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-orange-600">
@@ -353,7 +352,6 @@ export default function ProductsPage() {
                                     </div>
                                 </div>
 
-                                {/* Stock */}
                                 <div className="mb-6 flex items-center gap-2">
                                     <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -366,9 +364,8 @@ export default function ProductsPage() {
                                         )}
                                     </span>
                                 </div>
-                                {/*Materiales*/}
+
                                 <div className="mb-5 flex items-center gap-3">
-                                    {/* Icono de “materials” */}
                                     <svg viewBox="0 0 16 16" fill="currentColor" className="size-4 text-gray-500">
                                         <path fillRule="evenodd" d="M15 4.5A3.5 3.5 0 0 1 11.435 8c-.99-.019-2.093.132-2.7.913l-4.13 5.31a2.015 2.015 0 1 1-2.827-2.828l5.309-4.13c.78-.607.932-1.71.914-2.7L8 4.5a3.5 3.5 0 0 1 4.477-3.362c.325.094.39.497.15.736L10.6 3.902a.48.48 0 0 0-.033.653c.271.314.565.608.879.879a.48.48 0 0 0 .653-.033l2.027-2.027c.239-.24.642-.175.736.15.09.31.138.637.138.976ZM3.75 13a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" clipRule="evenodd" />
                                         <path d="M11.5 9.5c.313 0 .62-.029.917-.084l1.962 1.962a2.121 2.121 0 0 1-3 3l-2.81-2.81 1.35-1.734c.05-.064.158-.158.426-.233.278-.078.639-.11 1.062-.102l.093.001ZM5 4l1.446 1.445a2.256 2.256 0 0 1-.047.21c-.075.268-.169.377-.233.427l-.61.474L4 5H2.655a.25.25 0 0 1-.224-.139l-1.35-2.7a.25.25 0 0 1 .047-.289l.745-.745a.25.25 0 0 1 .289-.047l2.7 1.35A.25.25 0 0 1 5 2.654V4Z" />
@@ -378,9 +375,8 @@ export default function ProductsPage() {
                                         {selectedProduct.materials?.join(", ") || "No disponibles"}
                                     </span>
                                 </div>
-                                {/*Shiping cost*/}
+
                                 <div className="mb-5 flex items-center gap-3">
-                                    {/* Icono de “materials” */}
                                     <svg viewBox="0 0 16 16" fill="currentColor" className="size-4 text-gray-500">
                                         <path d="M2.908 2.067A.978.978 0 0 0 2 3.05V8h6V3.05a.978.978 0 0 0-.908-.983 32.481 32.481 0 0 0-4.184 0ZM12.919 4.722A.98.98 0 0 0 11.968 4H10a1 1 0 0 0-1 1v6.268A2 2 0 0 1 12 13h1a.977.977 0 0 0 .985-1 31.99 31.99 0 0 0-1.066-7.278Z" />
                                         <path d="M11 13a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM2 12V9h6v3a1 1 0 0 1-1 1 2 2 0 1 0-4 0 1 1 0 0 1-1-1Z" />
@@ -392,8 +388,6 @@ export default function ProductsPage() {
                                     </span>
                                 </div>
 
-
-                                {/* Descripción */}
                                 {selectedProduct.full_description && (
                                     <div className="mb-6">
                                         <h3 className="text-lg font-semibold text-gray-800 mb-2">Descripción</h3>
@@ -403,7 +397,6 @@ export default function ProductsPage() {
                                     </div>
                                 )}
 
-                                {/* Botón agregar al carrito */}
                                 <Button
                                     onClick={() => {
                                         handleAddToCart(selectedProduct)
@@ -427,7 +420,6 @@ export default function ProductsPage() {
                                             : "🛒 Agregar al Carrito"}
                                 </Button>
 
-                                {/* Cantidad en carrito */}
                                 {items.find(item => item.product_id === selectedProduct._id) && (
                                     <div className="mt-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
                                         <p className="text-emerald-700 text-center font-medium">

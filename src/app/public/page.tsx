@@ -6,7 +6,6 @@ import { useCart } from "@/context/cart-context"
 import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/Button"
-import Link from "next/link"
 
 interface Product {
     _id: string
@@ -199,3 +198,4 @@ export default function HomePage() {
         </div>
     )
 }
+

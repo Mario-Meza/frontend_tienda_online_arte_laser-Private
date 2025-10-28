@@ -1,145 +1,90 @@
 "use client"
-
-import { useEffect, useState } from "react"
 import { useAuth } from "@/context/auth_context"
 import { ProtectedRoute } from "@/components/shared/ProtectedRoute"
-import Link from "next/link"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ProfileTab } from "@/components/customer/profile-tab"
+import { FavoritesTab } from "@/components/customer/favorites-tab"
+import { OrdersList } from "@/components/customer/OrderList"
+export default function CustomerProfile() {
+    const { user } = useAuth()
 
-interface Stats {
-    totalProducts: number
-    totalOrders: number
-    totalCustomers: number
-    totalRevenue: number
-    pendingOrders: number
-}
+    const getInitials = (name: string) => {
+        return name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2)
+    }
 
-export default function AdminDashboard() {
-    const { user, token } = useAuth()
-    const [stats, setStats] = useState<Stats>({
-        totalProducts: 0,
-        totalOrders: 0,
-        totalCustomers: 0,
-        totalRevenue: 0,
-        pendingOrders: 0,
-    })
-    const [loading, setLoading] = useState(true)
-
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                // Obtener productos
-                const productsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
-                const products = await productsRes.json()
-
-                // Obtener órdenes
-                const ordersRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
-                const orders = await ordersRes.json()
-
-                // Obtener clientes
-                const customersRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
-                const customers = await customersRes.json()
-
-                setStats({
-                    totalProducts: products.length,
-                    totalOrders: orders.length,
-                    totalCustomers: customers.length,
-                    totalRevenue: orders.reduce((sum: number, order: any) => sum + order.total, 0),
-                    pendingOrders: orders.filter((o: any) => o.status === "pending").length,
-                })
-            } catch (error) {
-                console.error("Error fetching stats:", error)
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        fetchStats()
-    }, [token])
+    const getMemberSince = () => {
+        if (!user?.createdAt) return "Miembro desde 2024"
+        const date = new Date(user.createdAt)
+        return `Miembro desde ${date.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}`
+    }
 
     return (
         <ProtectedRoute>
-            <div className="container py-12">
-                <div className="mb-12">
-                    <h1 className="text-4xl font-bold mb-2">Mi perfil</h1>
-                    <p className="text-gray-500 font-bold mb-2">Bienvenido, {user?.name}</p>
-                </div>
-
-                {/* Estadísticas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                    <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-                        <h3 className="text-sm font-medium mb-2 opacity-90">Total Productos</h3>
-                        <p className="text-4xl font-bold">{stats.totalProducts}</p>
-                    </div>
-
-                    <div className="card bg-gradient-to-br from-green-500 to-green-600 text-white">
-                        <h3 className="text-sm font-medium mb-2 opacity-90">Total Órdenes</h3>
-                        <p className="text-4xl font-bold">{stats.totalOrders}</p>
-                    </div>
-
-                    <div className="card bg-gradient-to-br from-purple-500 to-purple-600 text-white">
-                        <h3 className="text-sm font-medium mb-2 opacity-90">Clientes</h3>
-                        <p className="text-4xl font-bold">{stats.totalCustomers}</p>
-                    </div>
-
-                    <div className="card bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-                        <h3 className="text-sm font-medium mb-2 opacity-90">Ingresos Totales</h3>
-                        <p className="text-4xl font-bold">${stats.totalRevenue.toFixed(2)}</p>
-                    </div>
-                </div>
-
-                {/* Alertas */}
-                {stats.pendingOrders > 0 && (
-                    <div className="card bg-yellow-50 border-yellow-200 mb-12">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h3 className="text-lg font-bold text-yellow-800 mb-1">
-                                    ⚠️ Atención Requerida
-                                </h3>
-                                <p className="text-yellow-700">
-                                    Tienes {stats.pendingOrders} órdenes pendientes de procesar
-                                </p>
+            <div className="min-h-screen bg-background">
+                <div className="border-b border-border">
+                    <div className="container py-8 md:py-12">
+                        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                            <Avatar className="h-24 w-24 md:h-32 md:w-32">
+                                <AvatarFallback className="text-2xl md:text-3xl font-bold bg-primary text-primary-foreground">
+                                    {user?.name ? getInitials(user.name) : "U"}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                                <h1 className="text-3xl md:text-4xl font-bold mb-2 text-balance">{user?.name || "Usuario"}</h1>
+                                <p className="text-muted-foreground text-sm md:text-base">{getMemberSince()}</p>
                             </div>
-                            <Link href="/customer/orders" className="btn btn-primary">
-                                Ver Órdenes
-                            </Link>
                         </div>
                     </div>
-                )}
+                </div>
 
-                {/* Acciones Rápidas */}
-                <div>
-                    <h2 className="text-2xl font-bold mb-6">Acciones Rápidas</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Link href="/admin/products" className="card hover:shadow-lg transition-shadow">
-                            <div className="text-center">
-                                <div className="text-4xl mb-3">📦</div>
-                                <h3 className="font-bold mb-2">Gestionar Productos</h3>
-                                <p className="text-sm text-gray-500 ">Ver y editar productos</p>
-                            </div>
-                        </Link>
+                <div className="container py-6">
+                    <Tabs defaultValue="profile" className="w-full">
+                        <TabsList className="w-full justify-start border-b border-border rounded-none bg-transparent h-auto p-0 mb-8">
+                            <TabsTrigger
+                                value="profile"
+                                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
+                            >
+                                Perfil
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="orders"
+                                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
+                            >
+                                Pedidos
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="favorites"
+                                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
+                            >
+                                Favoritos
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="settings"
+                                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-6 py-3"
+                            >
+                                Configuración
+                            </TabsTrigger>
+                        </TabsList>
 
-                        <Link href="/admin/orders" className="card hover:shadow-lg transition-shadow">
-                            <div className="text-center">
-                                <div className="text-4xl mb-3">📋</div>
-                                <h3 className="font-bold mb-2">Gestionar Órdenes</h3>
-                                <p className="text-sm text-gray-500 ">Ver y actualizar órdenes</p>
-                            </div>
-                        </Link>
+                        <TabsContent value="profile" className="mt-0">
+                            <ProfileTab />
+                        </TabsContent>
 
-                        <Link href="/admin/customers" className="card hover:shadow-lg transition-shadow">
-                            <div className="text-center">
-                                <div className="text-4xl mb-3">👥</div>
-                                <h3 className="font-bold mb-2">Ver Clientes</h3>
-                                <p className="text-sm text-gray-500 ">Administrar usuarios</p>
-                            </div>
-                        </Link>
-                    </div>
+                        <TabsContent value="orders" className="mt-0">
+                            <OrdersList />
+                        </TabsContent>
+
+                        <TabsContent value="favorites" className="mt-0">
+                            <FavoritesTab />
+                        </TabsContent>
+
+                    </Tabs>
                 </div>
             </div>
         </ProtectedRoute>

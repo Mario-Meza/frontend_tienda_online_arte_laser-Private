@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/auth_context"
 import { CartProvider } from "@/context/cart-context"
 import Navbar from "@/components/layout/Navbar"
 import "./globals.css"
+import {Button} from "@/components/ui/Button";
 
 export default function RootLayout({
                                        children,
@@ -24,3 +25,7 @@ export default function RootLayout({
         </html>
     )
 }
+
+
+
+

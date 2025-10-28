@@ -18,10 +18,10 @@ export default function Navbar() {
     }
 
     return (
-        <nav className="bg-primary text-primary-foreground border-b border-neutral-200">
+        <nav className="bg-orange-500 text-primary-foreground border-b border-neutral-200">
             <div className="container flex items-center justify-between h-16">
                 <Link href="/" className="text-2xl font-bold">
-                    TiendaOnline
+                    Arte Láser
                 </Link>
 
                 <div className="flex items-center gap-6">
@@ -46,9 +46,6 @@ export default function Navbar() {
                                 </>
                             ) : (
                                 <>
-                                    <Link href="/customer/orders" className="hover:text-accent transition-colors">
-                                        Mis Pedidos
-                                    </Link>
                                     <Link href="/customer/cart" className="relative hover:text-accent transition-colors">
                                         Carrito
                                         {itemCount > 0 && (
@@ -63,7 +60,7 @@ export default function Navbar() {
                             <div className="flex items-center gap-3">
                                 <span className="text-sm">
                                     <Link href="/customer/dashboard" className="hover:text-accent transition-colors">
-                                        {user?.name}
+                                        Hola, {user?.name}
                                     </Link>
                                     {isAdmin && (
                                         <span className="ml-2 text-xs bg-yellow-500 text-black px-2 py-0.5 rounded">
@@ -78,10 +75,10 @@ export default function Navbar() {
                         </>
                     ) : (
                         <>
-                            <LinkButton href="/public/login" className="btn btn-secondary text-sm">
+                            <LinkButton href="/login" className="btn btn-primary text-sm">
                                 Iniciar Sesión
                             </LinkButton>
-                            <LinkButton href="/public/register" className="btn btn-primary text-sm">
+                            <LinkButton href="/register" className="btn btn-primary text-sm">
                                 Registrarse
                             </LinkButton>
                         </>

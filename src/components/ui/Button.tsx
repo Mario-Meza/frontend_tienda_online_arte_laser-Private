@@ -34,7 +34,7 @@ export function Button({ variant = "primary", size = "md", className = "", ...pr
 
 export function LinkButton({
                                href,
-                               variant = "primary",
+                               variant = "secondary",
                                size = "md",
                                className = "",
                                children,

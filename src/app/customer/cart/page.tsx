@@ -22,13 +22,16 @@ export default function CartPage() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products`)
+                // ✅ Usar el mismo endpoint que products page
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/all`)
                 if (response.ok) {
                     const data = await response.json()
-                    setProducts(data)
+                    // ✅ Asegurar que siempre sea un array
+                    setProducts(Array.isArray(data) ? data : [])
                 }
             } catch (error) {
                 console.error("Error al cargar productos:", error)
+                setProducts([]) // ✅ En caso de error, establecer array vacío
             } finally {
                 setLoading(false)
             }
@@ -41,8 +44,11 @@ export default function CartPage() {
         }
     }, [items.length])
 
-    // ✅ Función para obtener el stock de un producto
+    // ✅ Función para obtener el stock de un producto con validación
     const getProductStock = (productId: string): number => {
+        // ✅ CRÍTICO: Validar que products sea un array antes de usar .find()
+        if (!Array.isArray(products) || products.length === 0) return 0
+
         const product = products.find(p => p._id === productId)
         return product?.stock || 0
     }
@@ -103,7 +109,7 @@ export default function CartPage() {
     }
 
     const handleCheckout = () => {
-        router.push("/checkout")
+        router.push("/customer/checkout")
     }
 
     return (

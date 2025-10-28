@@ -26,6 +26,7 @@ export default function ProductsPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [selectedCategory, setSelectedCategory] = useState('all')
+    const [searchTerm, setSearchTerm] = useState('') // 🔍 Nuevo estado de búsqueda
     const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -34,21 +35,34 @@ export default function ProductsPage() {
     const router = useRouter()
 
     useEffect(() => {
+        const controller = new AbortController();
+
         const fetchProducts = async () => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products`)
-                if (!response.ok) throw new Error("Error al cargar productos")
-                const data = await response.json()
-                setProducts(data)
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "Error desconocido")
-            } finally {
-                setLoading(false)
-            }
-        }
+                // ✅ OPCIÓN 1: Usar endpoint /all (sin paginación)
+                const response = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/all`,
+                    { signal: controller.signal }
+                );
 
-        fetchProducts()
-    }, [])
+                if (!response.ok) throw new Error("Error al cargar productos");
+                const data = await response.json();
+                setProducts(data);
+            } catch (err) {
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                if (err.name !== "AbortError") {
+                    setError(err instanceof Error ? err.message : "Error desconocido");
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+        return () => controller.abort();
+    }, []);
+
 
     const getProductImage = (product: Product) => {
         if (product.main_image) return product.main_image
@@ -80,7 +94,7 @@ export default function ProductsPage() {
 
     const handleAddToCart = (product: Product) => {
         if (!isAuthenticated) {
-            router.push("/login")
+            router.push("/public/login")
             return
         }
 
@@ -103,13 +117,16 @@ export default function ProductsPage() {
 
     const categories = ['all', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))]
 
-    const filteredProducts = selectedCategory === 'all'
-        ? products
-        : products.filter(p => p.category === selectedCategory)
+    // 🔍 Filtro combinado: categoría + búsqueda por nombre
+    const filteredProducts = products.filter(p => {
+        const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory
+        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase())
+        return matchesCategory && matchesSearch
+    })
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-16 w-16 border-4 border-amber-200 border-t-amber-600 mx-auto mb-4"></div>
                     <p className="text-amber-800 font-medium">Cargando productos...</p>
@@ -120,7 +137,7 @@ export default function ProductsPage() {
 
     if (error) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br flex items-center justify-center">
                 <div className="text-center">
                     <div className="text-rose-600 mb-4 text-lg font-medium">Error: {error}</div>
                     <Button onClick={() => window.location.reload()}>Reintentar</Button>
@@ -130,7 +147,7 @@ export default function ProductsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
+        <div className="min-h-screen bg-gradient-to-br ">
             <div className="container py-12">
                 {/* Header */}
                 <div className="text-center mb-12">
@@ -140,6 +157,17 @@ export default function ProductsPage() {
                     <p className="text-lg text-amber-800/70 max-w-2xl mx-auto">
                         Descubre piezas únicas creadas con amor y dedicación
                     </p>
+                </div>
+
+                {/* 🔍 Barra de búsqueda */}
+                <div className="flex justify-center mb-8">
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Buscar producto..."
+                        className="w-full max-w-md px-5 py-3 rounded-full shadow-md border border-amber-200 focus:ring-2 focus:ring-amber-400 focus:outline-none text-amber-900 placeholder:text-gray-400 bg-white/80 backdrop-blur-sm"
+                    />
                 </div>
 
                 {/* Filtros */}
@@ -174,10 +202,10 @@ export default function ProductsPage() {
                             <div
                                 key={product._id}
                                 onClick={() => openProductDetails(product)}
-                                className="group relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer"
+                                className="group relative bg-white rounded-1xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer"
                             >
                                 {/* Imagen con precio sobrepuesto */}
-                                <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-amber-100 to-orange-100">
+                                <div className="relative aspect-square overflow-hidden bg-gradient-to-br">
                                     {imageErrors[product._id] ? (
                                         <div className="w-full h-full flex items-center justify-center">
                                             <svg className="w-24 h-24 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -285,7 +313,7 @@ export default function ProductsPage() {
                             {/* Galería de imágenes - scroll horizontal */}
                             <div className="md:w-1/2 bg-gray-100 relative">
                                 {/* Imagen principal */}
-                                <div className="h-96 md:h-full flex items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100">
+                                <div className="h-96 md:h-full flex items-center justify-center bg-gradient-to-br">
                                     <img
                                         src={getProductImages(selectedProduct)[currentImageIndex]}
                                         alt={selectedProduct.name}
@@ -441,5 +469,4 @@ export default function ProductsPage() {
                 </div>
             )}
         </div>
-    )
-}
+    )}
