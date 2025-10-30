@@ -5,6 +5,9 @@ import { useCart } from "@/context/cart-context"
 import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/Button"
+import { StarRating } from "@/components/ui/Stars"
+import { Heart, Star } from "lucide-react"
+
 
 interface Product {
     _id: string
@@ -21,48 +24,179 @@ interface Product {
     updated_at?: string
 }
 
+type NotificationType = 'success' | 'error' | 'info'
+
 export default function ProductsPage() {
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [selectedCategory, setSelectedCategory] = useState('all')
-    const [searchTerm, setSearchTerm] = useState('') // 🔍 Nuevo estado de búsqueda
+    const [searchTerm, setSearchTerm] = useState('')
     const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
     const { addItem, items } = useCart()
-    const { isAuthenticated } = useAuth()
+    const { isAuthenticated, user, token } = useAuth()
     const router = useRouter()
+    const [ratings, setRatings] = useState<Record<string, number>>({})
+    const [favorites, setFavorites] = useState<Set<string>>(new Set())
+    const [userRatings, setUserRatings] = useState<Record<string, number>>({})
+    const [notification, setNotification] = useState<{type: NotificationType, message: string} | null>(null)
 
+    // Función para mostrar notificaciones
+    const showNotification = (type: NotificationType, message: string) => {
+        setNotification({ type, message })
+        setTimeout(() => setNotification(null), 5000)
+    }
+
+    // Cargar ratings
     useEffect(() => {
-        const controller = new AbortController();
+        const fetchRatings = async () => {
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/rating`)
+                if (!response.ok) throw new Error("Error al cargar ratings")
+                const data = await response.json()
+
+                const grouped: Record<string, number[]> = {}
+                data.forEach((r: any) => {
+                    if (!grouped[r.product_id]) grouped[r.product_id] = []
+                    grouped[r.product_id].push(r.score)
+                })
+
+                const avg: Record<string, number> = {}
+                for (const [productId, vals] of Object.entries(grouped)) {
+                    avg[productId] = vals.reduce((a, b) => a + b, 0) / vals.length
+                }
+                setRatings(avg)
+            } catch (err) {
+                console.error("Error cargando ratings:", err)
+            }
+        }
+
+        fetchRatings()
+    }, [])
+
+
+    // ✅ Cargar favorites del usuario autenticado
+    useEffect(() => {
+        if (!isAuthenticated || !token) return
+
+        const fetchFavorites = async () => {
+            try {
+                const response = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/favorites`,
+                    {
+                        headers: {
+                            "Authorization": `Bearer ${token}`
+                        }
+                    }
+                )
+
+                if (response.ok) {
+                    const data = await response.json()
+                    const favProductIds = new Set(data.map((fav: any) => fav.product_id))
+                    setFavorites(favProductIds)
+                }
+            } catch (error) {
+                console.error("Error al cargar favoritos:", error)
+            }
+        }
+
+        fetchFavorites()
+    }, [isAuthenticated, token])
+
+
+    // Cargar productos
+    useEffect(() => {
+        const controller = new AbortController()
 
         const fetchProducts = async () => {
             try {
-                // ✅ OPCIÓN 1: Usar endpoint /all (sin paginación)
                 const response = await fetch(
                     `${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/all`,
                     { signal: controller.signal }
-                );
+                )
 
-                if (!response.ok) throw new Error("Error al cargar productos");
-                const data = await response.json();
-                setProducts(data);
-            } catch (err) {
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-expect-error
+                if (!response.ok) throw new Error("Error al cargar productos")
+                const data = await response.json()
+                setProducts(Array.isArray(data) ? data : [])
+            } catch (err: any) {
                 if (err.name !== "AbortError") {
-                    setError(err instanceof Error ? err.message : "Error desconocido");
+                    setError(err instanceof Error ? err.message : "Error desconocido")
                 }
             } finally {
-                setLoading(false);
+                setLoading(false)
             }
-        };
+        }
 
-        fetchProducts();
-        return () => controller.abort();
-    }, []);
+        fetchProducts()
+        return () => controller.abort()
+    }, [])
 
+
+    // ✅ Toggle favorito (agregar o eliminar)
+    const toggleFavorite = async (productId: string, e: React.MouseEvent) => {
+        e.stopPropagation()
+
+        if (!isAuthenticated || !token) {
+            showNotification('info', '🔐 Debes iniciar sesión para agregar favoritos')
+            router.push("/login")
+            return
+        }
+
+        const isFavorite = favorites.has(productId)
+
+        try {
+            if (isFavorite) {
+                // ✅ ELIMINAR favorito
+                const response = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/favorites/product/${productId}`,
+                    {
+                        method: "DELETE",
+                        headers: {
+                            "Authorization": `Bearer ${token}`
+                        }
+                    }
+                )
+
+                if (response.ok || response.status === 204) {
+                    setFavorites(prev => {
+                        const newSet = new Set(prev)
+                        newSet.delete(productId)
+                        return newSet
+                    })
+                    showNotification('success', '💔 Eliminado de favoritos')
+                }
+            } else {
+                // ✅ AGREGAR favorito
+                const response = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/favorites`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            product_id: productId
+                        })
+                    }
+                )
+
+                if (response.ok) {
+                    setFavorites(prev => new Set(prev).add(productId))
+                    showNotification('success', '❤️ Agregado a favoritos')
+                } else if (response.status === 409) {
+                    showNotification('info', 'Este producto ya está en favoritos')
+                } else if (response.status === 404) {
+                    showNotification('error', 'Producto no encontrado')
+                }
+            }
+        } catch (error) {
+            console.error("Error al actualizar favorito:", error)
+            showNotification('error', '❌ Error de conexión')
+        }
+    }
 
     const getProductImage = (product: Product) => {
         if (product.main_image) return product.main_image
@@ -94,7 +228,7 @@ export default function ProductsPage() {
 
     const handleAddToCart = (product: Product) => {
         if (!isAuthenticated) {
-            router.push("/public/login")
+            router.push("/login")
             return
         }
 
@@ -102,7 +236,7 @@ export default function ProductsPage() {
         const currentQuantityInCart = existingItem ? existingItem.quantity : 0
 
         if (currentQuantityInCart >= product.stock) {
-            alert(`No puedes agregar más de ${product.stock} unidades de este producto.`)
+            showNotification('error', `No puedes agregar más de ${product.stock} unidades de este producto`)
             return
         }
 
@@ -113,11 +247,11 @@ export default function ProductsPage() {
             quantity: 1,
             image: getProductImage(product),
         })
+        showNotification('success', '¡Producto agregado al carrito!')
     }
 
     const categories = ['all', ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))]
 
-    // 🔍 Filtro combinado: categoría + búsqueda por nombre
     const filteredProducts = products.filter(p => {
         const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory
         const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -126,7 +260,7 @@ export default function ProductsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-16 w-16 border-4 border-amber-200 border-t-amber-600 mx-auto mb-4"></div>
                     <p className="text-amber-800 font-medium">Cargando productos...</p>
@@ -137,7 +271,7 @@ export default function ProductsPage() {
 
     if (error) {
         return (
-            <div className="min-h-screen bg-gradient-to-br flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 flex items-center justify-center">
                 <div className="text-center">
                     <div className="text-rose-600 mb-4 text-lg font-medium">Error: {error}</div>
                     <Button onClick={() => window.location.reload()}>Reintentar</Button>
@@ -147,7 +281,7 @@ export default function ProductsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br ">
+        <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
             <div className="container py-12">
                 {/* Header */}
                 <div className="text-center mb-12">
@@ -159,7 +293,7 @@ export default function ProductsPage() {
                     </p>
                 </div>
 
-                {/* 🔍 Barra de búsqueda */}
+                {/* Barra de búsqueda */}
                 <div className="flex justify-center mb-8">
                     <input
                         type="text"
@@ -197,14 +331,14 @@ export default function ProductsPage() {
                         const itemInCart = items.find(item => item.product_id === product._id)
                         const quantityInCart = itemInCart?.quantity || 0
                         const isOutOfStock = product.stock === 0
+                        const isFavorite = favorites.has(product._id)
 
                         return (
                             <div
                                 key={product._id}
                                 onClick={() => openProductDetails(product)}
-                                className="group relative bg-white rounded-1xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer"
+                                className="group relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer"
                             >
-                                {/* Imagen con precio sobrepuesto */}
                                 <div className="relative aspect-square overflow-hidden bg-gradient-to-br">
                                     {imageErrors[product._id] ? (
                                         <div className="w-full h-full flex items-center justify-center">
@@ -220,8 +354,16 @@ export default function ProductsPage() {
                                             onError={() => handleImageError(product._id)}
                                         />
                                     )}
+                                    {/* ✅ Botón de favorito */}
+                                    <button
+                                        onClick={(e) => toggleFavorite(product._id, e)}
+                                        className="absolute top-4 right-4 p-2 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all z-10"
+                                    >
+                                        <Heart
+                                            className={`w-6 h-6 ${isFavorite ? 'fill-rose-500 text-rose-500' : 'text-gray-400'}`}
+                                        />
+                                    </button>
 
-                                    {/* Precio sobrepuesto - estilo etiqueta */}
                                     <div className="absolute bottom-4 left-4">
                                         <div className="bg-white/95 backdrop-blur-sm px-5 py-3 rounded-2xl shadow-xl border-2 border-amber-200">
                                             <div className="flex items-baseline gap-1">
@@ -233,7 +375,6 @@ export default function ProductsPage() {
                                         </div>
                                     </div>
 
-                                    {/* Badge agotado */}
                                     {isOutOfStock && (
                                         <div className="absolute top-4 right-4">
                                             <div className="bg-rose-500 text-white px-4 py-2 rounded-full shadow-lg font-bold text-sm">
@@ -242,16 +383,8 @@ export default function ProductsPage() {
                                         </div>
                                     )}
 
-                                    {/* Badge stock bajo */}
-                                    {!isOutOfStock && product.stock < 10 && (
-                                        <div className="absolute top-4 right-4">
-                                            <div className="bg-amber-400 text-amber-900 px-4 py-2 rounded-full shadow-lg font-bold text-sm">
-                                                ¡Solo {product.stock}!
-                                            </div>
-                                        </div>
-                                    )}
 
-                                    {/* Badge en carrito */}
+
                                     {quantityInCart > 0 && (
                                         <div className="absolute top-4 left-4">
                                             <div className="bg-emerald-500 text-white px-3 py-2 rounded-full shadow-lg font-bold text-sm flex items-center gap-2">
@@ -263,7 +396,6 @@ export default function ProductsPage() {
                                         </div>
                                     )}
 
-                                    {/* Indicador "Ver detalles" en hover */}
                                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
                                         <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white px-6 py-3 rounded-full shadow-xl">
                                             <span className="text-amber-700 font-bold">Ver Detalles</span>
@@ -271,18 +403,17 @@ export default function ProductsPage() {
                                     </div>
                                 </div>
 
-                                {/* Nombre del producto debajo */}
                                 <div className="p-4 text-center">
                                     <h3 className="text-lg font-bold text-gray-800 line-clamp-2">
                                         {product.name}
                                     </h3>
+                                    <StarRating value={ratings[product._id] || 0} />
                                 </div>
                             </div>
                         )
                     })}
                 </div>
 
-                {/* Mensaje cuando no hay productos */}
                 {filteredProducts.length === 0 && (
                     <div className="text-center py-20">
                         <div className="inline-block p-8 bg-white/60 backdrop-blur-sm rounded-3xl shadow-xl">
@@ -310,9 +441,7 @@ export default function ProductsPage() {
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex flex-col md:flex-row h-full max-h-[90vh]">
-                            {/* Galería de imágenes - scroll horizontal */}
                             <div className="md:w-1/2 bg-gray-100 relative">
-                                {/* Imagen principal */}
                                 <div className="h-96 md:h-full flex items-center justify-center bg-gradient-to-br">
                                     <img
                                         src={getProductImages(selectedProduct)[currentImageIndex]}
@@ -321,7 +450,6 @@ export default function ProductsPage() {
                                     />
                                 </div>
 
-                                {/* Miniaturas scroll horizontal */}
                                 {getProductImages(selectedProduct).length > 1 && (
                                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
                                         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -346,7 +474,6 @@ export default function ProductsPage() {
                                     </div>
                                 )}
 
-                                {/* Botón cerrar */}
                                 <button
                                     onClick={closeProductDetails}
                                     className="absolute top-4 right-4 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all"
@@ -357,21 +484,19 @@ export default function ProductsPage() {
                                 </button>
                             </div>
 
-                            {/* Información del producto */}
                             <div className="md:w-1/2 p-8 overflow-y-auto">
-                                {/* Categoría */}
                                 {selectedProduct.category && (
                                     <span className="inline-block px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold uppercase tracking-wide mb-4">
                                         {selectedProduct.category}
                                     </span>
                                 )}
 
-                                {/* Nombre */}
                                 <h2 className="text-3xl font-bold text-gray-900 mb-4">
                                     {selectedProduct.name}
                                 </h2>
+                                {/* ✅ Botón de favorito */}
 
-                                {/* Precio */}
+
                                 <div className="mb-6">
                                     <div className="flex items-baseline gap-2">
                                         <span className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-orange-600">
@@ -381,7 +506,6 @@ export default function ProductsPage() {
                                     </div>
                                 </div>
 
-                                {/* Stock */}
                                 <div className="mb-6 flex items-center gap-2">
                                     <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -394,9 +518,8 @@ export default function ProductsPage() {
                                         )}
                                     </span>
                                 </div>
-                                {/*Materiales*/}
+
                                 <div className="mb-5 flex items-center gap-3">
-                                    {/* Icono de “materials” */}
                                     <svg viewBox="0 0 16 16" fill="currentColor" className="size-4 text-gray-500">
                                         <path fillRule="evenodd" d="M15 4.5A3.5 3.5 0 0 1 11.435 8c-.99-.019-2.093.132-2.7.913l-4.13 5.31a2.015 2.015 0 1 1-2.827-2.828l5.309-4.13c.78-.607.932-1.71.914-2.7L8 4.5a3.5 3.5 0 0 1 4.477-3.362c.325.094.39.497.15.736L10.6 3.902a.48.48 0 0 0-.033.653c.271.314.565.608.879.879a.48.48 0 0 0 .653-.033l2.027-2.027c.239-.24.642-.175.736.15.09.31.138.637.138.976ZM3.75 13a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" clipRule="evenodd" />
                                         <path d="M11.5 9.5c.313 0 .62-.029.917-.084l1.962 1.962a2.121 2.121 0 0 1-3 3l-2.81-2.81 1.35-1.734c.05-.064.158-.158.426-.233.278-.078.639-.11 1.062-.102l.093.001ZM5 4l1.446 1.445a2.256 2.256 0 0 1-.047.21c-.075.268-.169.377-.233.427l-.61.474L4 5H2.655a.25.25 0 0 1-.224-.139l-1.35-2.7a.25.25 0 0 1 .047-.289l.745-.745a.25.25 0 0 1 .289-.047l2.7 1.35A.25.25 0 0 1 5 2.654V4Z" />
@@ -406,9 +529,8 @@ export default function ProductsPage() {
                                         {selectedProduct.materials?.join(", ") || "No disponibles"}
                                     </span>
                                 </div>
-                                {/*Shiping cost*/}
+
                                 <div className="mb-5 flex items-center gap-3">
-                                    {/* Icono de “materials” */}
                                     <svg viewBox="0 0 16 16" fill="currentColor" className="size-4 text-gray-500">
                                         <path d="M2.908 2.067A.978.978 0 0 0 2 3.05V8h6V3.05a.978.978 0 0 0-.908-.983 32.481 32.481 0 0 0-4.184 0ZM12.919 4.722A.98.98 0 0 0 11.968 4H10a1 1 0 0 0-1 1v6.268A2 2 0 0 1 12 13h1a.977.977 0 0 0 .985-1 31.99 31.99 0 0 0-1.066-7.278Z" />
                                         <path d="M11 13a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM2 12V9h6v3a1 1 0 0 1-1 1 2 2 0 1 0-4 0 1 1 0 0 1-1-1Z" />
@@ -420,16 +542,97 @@ export default function ProductsPage() {
                                     </span>
                                 </div>
 
-
-                                {/* Descripción */}
                                 {selectedProduct.full_description && (
                                     <div className="mb-6">
                                         <h3 className="text-lg font-semibold text-gray-800 mb-2">Descripción</h3>
                                         <p className="text-gray-600 leading-relaxed">
-                                            {selectedProduct.full_description || "No disponible"}
+                                            {selectedProduct.full_description}
                                         </p>
                                     </div>
                                 )}
+
+                                {/* Calificación del usuario */}
+                                <div className="mb-6 p-4 bg-amber-50 rounded-2xl border border-amber-200">
+                                    <h3 className="text-lg font-semibold text-gray-800 mb-3">Tu calificación</h3>
+                                    <div className="flex gap-2 justify-center">
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                            <button
+                                                key={star}
+                                                onClick={async () => {
+                                                    if (!isAuthenticated) {
+                                                        showNotification('info', '🔐 Debes iniciar sesión para calificar productos')
+                                                        router.push("/login")
+                                                        return
+                                                    }
+
+                                                    try {
+                                                        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/rating`, {
+                                                            method: "POST",
+                                                            headers: {
+                                                                "Content-Type": "application/json",
+                                                                "Authorization": `Bearer ${token}`
+                                                            },
+                                                            body: JSON.stringify({
+                                                                product_id: selectedProduct._id,
+                                                                score: star,
+                                                                comment: "Calificación desde frontend"
+                                                            })
+                                                        })
+
+                                                        if (response.status === 403) {
+                                                            showNotification('error', '🛒 Solo puedes calificar productos que hayas comprado y recibido')
+                                                            return
+                                                        }
+
+                                                        if (response.status === 409) {
+                                                            showNotification('info', 'ℹ️ Ya has calificado este producto anteriormente')
+                                                            return
+                                                        }
+
+                                                        if (response.status === 404) {
+                                                            showNotification('error', '❌ Producto no encontrado')
+                                                            return
+                                                        }
+
+                                                        if (response.status === 401) {
+                                                            showNotification('error', '🔐 Tu sesión ha expirado. Inicia sesión nuevamente')
+                                                            router.push("/login")
+                                                            return
+                                                        }
+
+                                                        if (!response.ok) {
+                                                            const errorData = await response.json().catch(() => ({}))
+                                                            console.error("Error del servidor:", errorData)
+                                                            showNotification('error', '❌ Error al guardar la calificación')
+                                                            return
+                                                        }
+
+                                                        setUserRatings(prev => ({ ...prev, [selectedProduct._id]: star }))
+                                                        showNotification('success', `✅ ¡Gracias por tu calificación de ${star} ${star === 1 ? 'estrella' : 'estrellas'}!`)
+
+                                                    } catch (err) {
+                                                        console.error("Error:", err)
+                                                        showNotification('error', '❌ Error de conexión. Verifica tu internet')
+                                                    }
+                                                }}
+                                            >
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    fill={star <= (userRatings[selectedProduct._id] || 0) ? "gold" : "none"}
+                                                    viewBox="0 0 24 24"
+                                                    strokeWidth={1.5}
+                                                    stroke="gold"
+                                                    className="w-8 h-8 transition-transform hover:scale-110 cursor-pointer"
+                                                >
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499l2.264 4.587 5.065.736-3.664 3.572.865 5.04L11.48 14.9l-4.53 2.375.865-5.04-3.664-3.572 5.065-.736 2.264-4.587z" />
+                                                </svg>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-500 text-center mt-2">
+                                        Haz clic en las estrellas para calificar
+                                    </p>
+                                </div>
 
                                 {/* Botón agregar al carrito */}
                                 <Button
@@ -455,7 +658,6 @@ export default function ProductsPage() {
                                             : "🛒 Agregar al Carrito"}
                                 </Button>
 
-                                {/* Cantidad en carrito */}
                                 {items.find(item => item.product_id === selectedProduct._id) && (
                                     <div className="mt-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-200">
                                         <p className="text-emerald-700 text-center font-medium">
@@ -468,5 +670,62 @@ export default function ProductsPage() {
                     </div>
                 </div>
             )}
+
+            {/* Notificación Toast */}
+            {notification && (
+                <div className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-2xl shadow-2xl transition-all duration-300 ${
+                    notification.type === 'success' ? 'bg-emerald-500' :
+                        notification.type === 'error' ? 'bg-rose-500' :
+                            'bg-blue-500'
+                } text-white animate-slide-in`}>
+                    <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0">
+                            {notification.type === 'success' && (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                            )}
+                            {notification.type === 'error' && (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            )}
+                            {notification.type === 'info' && (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            )}
+                        </div>
+                        <div className="flex-1">
+                            <p className="font-semibold text-sm leading-relaxed">{notification.message}</p>
+                        </div>
+                        <button
+                            onClick={() => setNotification(null)}
+                            className="flex-shrink-0 hover:bg-white/20 rounded-full p-1 transition-colors"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <style jsx>{`
+                @keyframes slide-in {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                .animate-slide-in {
+                    animation: slide-in 0.3s ease-out;
+                }
+            `}</style>
         </div>
-    )}
+    )
+}
