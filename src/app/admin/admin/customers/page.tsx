@@ -42,6 +42,7 @@ export default function AdminCustomersPage() {
         phone: "",
         address: "",
         role: "customer"
+
     })
     const [showPassword, setShowPassword] = useState(false)
     const [submitting, setSubmitting] = useState(false)
