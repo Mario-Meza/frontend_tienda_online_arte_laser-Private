@@ -8,6 +8,7 @@ interface User {
     email: string
     name: string
     phone?: string
+    address?: string
     role: 'admin' | 'customer' // ✅ Agregar role
 }
 
