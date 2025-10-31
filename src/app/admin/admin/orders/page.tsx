@@ -143,7 +143,7 @@ export default function OrdersPage() {
                     <p className="text-muted-foreground mb-6">
                         Comienza a comprar para ver tus pedidos aquí
                     </p>
-                    <Link href="/products" className="btn btn-primary">
+                    <Link href="/" className="btn btn-primary">
                         Ver Productos
                     </Link>
                 </div>

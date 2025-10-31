@@ -28,7 +28,7 @@ export default function AdminDashboard() {
         const fetchStats = async () => {
             try {
                 // Obtener productos
-                const productsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products`, {
+                const productsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/all`, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 const products = await productsRes.json()
@@ -116,7 +116,7 @@ export default function AdminDashboard() {
                 <div>
                     <h2 className="text-2xl font-bold mb-6">Acciones Rápidas</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Link href="/admin/products" className="card hover:shadow-lg transition-shadow">
+                        <Link href="/admin/admin/products" className="card hover:shadow-lg transition-shadow">
                             <div className="text-center">
                                 <div className="text-4xl mb-3">📦</div>
                                 <h3 className="font-bold mb-2">Gestionar Productos</h3>
@@ -124,7 +124,7 @@ export default function AdminDashboard() {
                             </div>
                         </Link>
 
-                        <Link href="/admin/orders" className="card hover:shadow-lg transition-shadow">
+                        <Link href="/admin/admin/orders" className="card hover:shadow-lg transition-shadow">
                             <div className="text-center">
                                 <div className="text-4xl mb-3">📋</div>
                                 <h3 className="font-bold mb-2">Gestionar Órdenes</h3>
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
                             </div>
                         </Link>
 
-                        <Link href="/admin/customers" className="card hover:shadow-lg transition-shadow">
+                        <Link href="/admin/admin/customers" className="card hover:shadow-lg transition-shadow">
                             <div className="text-center">
                                 <div className="text-4xl mb-3">👥</div>
                                 <h3 className="font-bold mb-2">Ver Clientes</h3>

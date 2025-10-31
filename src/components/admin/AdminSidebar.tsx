@@ -6,22 +6,22 @@ import { usePathname } from "next/navigation"
 const menuItems = [
     {
         label: "Dashboard",
-        href: "/admin/dashboard",
+        href: "/admin/admin/dashboard",
         icon: "📊"
     },
     {
         label: "Productos",
-        href: "/admin/products",
+        href: "/admin/admin/products",
         icon: "📦"
     },
     {
         label: "Órdenes",
-        href: "/admin/orders",
+        href: "/admin/admin/orders",
         icon: "📋"
     },
     {
         label: "Clientes",
-        href: "/admin/customers",
+        href: "/admin/admin/customers",
         icon: "👥"
     },
 ]

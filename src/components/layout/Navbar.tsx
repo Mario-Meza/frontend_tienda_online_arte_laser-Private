@@ -37,12 +37,6 @@ export default function Navbar() {
                                     <Link href="/admin/admin/dashboard" className="hover:text-accent transition-colors">
                                         📊 Dashboard
                                     </Link>
-                                    <Link href="/admin/admin/products" className="hover:text-accent transition-colors">
-                                        📦 Productos
-                                    </Link>
-                                    <Link href="/admin/admin/orders" className="hover:text-accent transition-colors">
-                                        📋 Órdenes
-                                    </Link>
                                 </>
                             ) : (
                                 <>
