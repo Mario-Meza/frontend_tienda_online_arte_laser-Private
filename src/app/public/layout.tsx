@@ -1,6 +1,4 @@
 // app/layout.tsx
-import { AuthProvider } from "@/context/auth_context"
-import { CartProvider } from "@/context/cart-context"
 import "../globals.css"
 
 export const metadata = {
@@ -8,15 +6,6 @@ export const metadata = {
     description: "Compra productos de calidad con envío rápido",
 }
 
-export default function RootLayout(
-    {children,}:
-    { children: React.ReactNode
-}) {
-    return (
-        <AuthProvider>
-            <CartProvider>
-                {children}
-            </CartProvider>
-        </AuthProvider>
-    )
+export default function PublicLayout({ children }: { children: React.ReactNode }) {
+    return <>{children}</>
 }
