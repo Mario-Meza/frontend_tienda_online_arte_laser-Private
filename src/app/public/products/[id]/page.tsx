@@ -23,12 +23,17 @@ interface Product {
 
 interface Rating {
     _id: string
-    user_id: string
     username?: string
     product_id: string
+    customer_id: string
     score: number
     comment?: string
     created_at: string
+}
+
+interface Customer {
+    _id: string
+    name: string
 }
 
 type NotificationType = 'success' | 'error' | 'info'
@@ -88,6 +93,26 @@ export default function ProductDetailPage() {
                 if (response.ok) {
                     const data = await response.json()
                     setRatings(data)
+
+                    // Obtener nombres de los usuarios que dejaron reseña
+                    const ratingsWithNames = await Promise.all(
+                        data.map(async (r: Rating) => {
+                            try {
+                                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/public/${r.customer_id}`)
+                                if (res.ok) {
+                                    const customer: Customer = await res.json()
+                                    return { ...r, username: customer.name } // agregamos el nombre al rating
+                                }
+                            } catch (error) {
+                                console.error("Error al obtener nombre de cliente:", error)
+                            }
+                            return r
+                        })
+                    )
+
+                    setRatings(ratingsWithNames)
+
+
 
                     if (data.length > 0) {
                         const avg = data.reduce((sum: number, r: Rating) => sum + r.score, 0) / data.length
