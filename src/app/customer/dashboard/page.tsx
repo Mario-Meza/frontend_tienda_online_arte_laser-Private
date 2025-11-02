@@ -6,8 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProfileTab } from "@/components/customer/profile-tab"
 import { FavoritesTab } from "@/components/customer/favorites-tab"
 import { OrdersList } from "@/components/customer/OrderList"
+import {useEffect} from "react";
+import {useRouter} from "next/navigation";
 export default function CustomerProfile() {
     const { user } = useAuth()
+    const { isAdmin, isAuthenticated, token } = useAuth()
+    const router = useRouter()
 
     const getInitials = (name: string) => {
         return name
@@ -17,6 +21,11 @@ export default function CustomerProfile() {
             .toUpperCase()
             .slice(0, 2)
     }
+    useEffect(() => {
+        if (isAdmin) {
+            router.push("/admin/admin/dashboard"); // o la ruta que prefieras
+        }
+    }, [isAdmin, router]);
 
     const getMemberSince = () => {
         if (!user?.createdAt) return "Miembro desde 2024"

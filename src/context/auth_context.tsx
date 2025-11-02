@@ -9,6 +9,8 @@ interface User {
     name: string
     phone?: string
     address?: string
+    createdAt?: string   // ✅ Añadido
+    updatedAt?: string
     role: 'admin' | 'customer' // ✅ Agregar role
 }
 

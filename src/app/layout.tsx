@@ -7,11 +7,7 @@ import Navbar from "@/components/layout/Navbar"
 import "./globals.css"
 import {Button} from "@/components/ui/Button";
 
-export default function RootLayout({
-                                       children,
-                                   }: {
-    children: React.ReactNode
-}) {
+export default function RootLayout({children,}: { children: React.ReactNode }) {
     return (
         <html lang="es">
         <body>

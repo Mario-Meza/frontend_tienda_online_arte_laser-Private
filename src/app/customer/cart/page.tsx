@@ -13,10 +13,22 @@ interface Product {
 
 export default function CartPage() {
     const { items, removeItem, updateQuantity, total, clearCart } = useCart()
-    const { isAuthenticated } = useAuth()
+
     const router = useRouter()
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
+    const { login, isAuthenticated, user, isAdmin, isLoading } = useAuth()
+
+    // ✅ Redirigir si ya está autenticado
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            if (isAdmin) {
+                router.push("/admin/admin/dashboard") // o "/admin/dashboard"
+            } else {
+                router.push("/") // Página principal del cliente
+            }
+        }
+    }, [isAuthenticated, user, isAdmin, router])
 
     // ✅ Obtener stock actual de los productos
     useEffect(() => {

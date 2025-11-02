@@ -34,11 +34,13 @@ export default function ProductsPage() {
     const [searchTerm, setSearchTerm] = useState('')
     const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
     const { addItem, items } = useCart()
-    const { isAuthenticated, token } = useAuth()
+    const { isAuthenticated, token, isAdmin } = useAuth()
     const router = useRouter()
     const [ratings, setRatings] = useState<Record<string, number>>({})
     const [favorites, setFavorites] = useState<Set<string>>(new Set())
     const [notification, setNotification] = useState<{type: NotificationType, message: string} | null>(null)
+
+
 
     // Función para mostrar notificaciones
     const showNotification = (type: NotificationType, message: string) => {
@@ -261,9 +263,15 @@ export default function ProductsPage() {
     }
 
     return (
+
         <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
             <div className="container py-12">
                 {/* Header */}
+                {isAdmin && (
+                    <div className="bg-orange-400 text-white text-center py-2 rounded-md mb-6 shadow-sm">
+                        ℹ️¡ATENCION! Estás viendo la vista pública de la tienda (modo administrador)
+                    </div>
+                )}
                 <div className="text-center mb-12">
                     <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-amber-700 via-orange-600 to-rose-600">
                         Nuestros Productos
@@ -316,7 +324,10 @@ export default function ProductsPage() {
                         return (
                             <div
                                 key={product._id}
-                                onClick={() => router.push(`/public/products/${product._id}`)}
+                                onClick={() =>{
+                                    if (isAdmin) return;
+                                    router.push(`/public/products/${product._id}`)
+                                }}
                                 className="group relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer"
                             >
                                 <div className="relative aspect-square overflow-hidden bg-gradient-to-br">
@@ -336,14 +347,16 @@ export default function ProductsPage() {
                                     )}
 
                                     {/* Botón de favorito */}
-                                    <button
-                                        onClick={(e) => toggleFavorite(product._id, e)}
-                                        className="absolute top-4 right-4 p-2 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all z-10"
-                                    >
-                                        <Heart
-                                            className={`w-6 h-6 ${isFavorite ? 'fill-rose-500 text-rose-500' : 'text-gray-400'}`}
-                                        />
-                                    </button>
+                                    {!isAdmin &&(
+                                        <button
+                                            onClick={(e) => toggleFavorite(product._id, e)}
+                                            className="absolute top-4 right-4 p-2 bg-white/90 hover:bg-white rounded-full shadow-lg transition-all z-10"
+                                        >
+                                            <Heart
+                                                className={`w-6 h-6 ${isFavorite ? 'fill-rose-500 text-rose-500' : 'text-gray-400'}`}
+                                            />
+                                        </button>
+                                    )}
 
                                     {/* Precio */}
                                     <div className="absolute bottom-4 left-4">
@@ -367,7 +380,7 @@ export default function ProductsPage() {
                                     )}
 
                                     {/* Cantidad en carrito */}
-                                    {quantityInCart > 0 && (
+                                    {!isAdmin && quantityInCart > 0 && (
                                         <div className="absolute top-4 left-4">
                                             <div className="bg-emerald-500 text-white px-3 py-2 rounded-full shadow-lg font-bold text-sm flex items-center gap-2">
                                                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -394,21 +407,23 @@ export default function ProductsPage() {
                                     <StarRating value={ratings[product._id] || 0} />
 
                                     {/* Botón agregar al carrito - se detiene la propagación */}
-                                    <button
-                                        onClick={(e) => handleAddToCart(product, e)}
-                                        disabled={isOutOfStock || quantityInCart >= product.stock}
-                                        className={`w-full mt-3 py-2 rounded-xl font-semibold text-sm transition-all ${
-                                            isOutOfStock || quantityInCart >= product.stock
-                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-lg hover:scale-105'
-                                        }`}
-                                    >
-                                        {isOutOfStock
-                                            ? '🚫 Agotado'
-                                            : quantityInCart >= product.stock
-                                                ? '✓ Máximo en carrito'
-                                                : '🛒 Agregar al Carrito'}
-                                    </button>
+                                    {!isAdmin && (
+                                        <button
+                                            onClick={(e) => handleAddToCart(product, e)}
+                                            disabled={isOutOfStock || quantityInCart >= product.stock}
+                                            className={`w-full mt-3 py-2 rounded-xl font-semibold text-sm transition-all ${
+                                                isOutOfStock || quantityInCart >= product.stock
+                                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                    : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:shadow-lg hover:scale-105'
+                                            }`}
+                                        >
+                                            {isOutOfStock
+                                                ? '🚫 Agotado'
+                                                : quantityInCart >= product.stock
+                                                    ? '✓ Máximo en carrito'
+                                                    : '🛒 Agregar al Carrito'}
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         )

@@ -42,7 +42,6 @@ export default function ProductDetailPage() {
     const params = useParams()
     const router = useRouter()
     const { addItem, items } = useCart()
-    const { isAuthenticated, token } = useAuth()
 
     const [product, setProduct] = useState<Product | null>(null)
     const [ratings, setRatings] = useState<Rating[]>([])
@@ -57,11 +56,17 @@ export default function ProductDetailPage() {
     const [reviewScore, setReviewScore] = useState(0)
     const [reviewComment, setReviewComment] = useState("")
     const [submittingReview, setSubmittingReview] = useState(false)
+    const { isAdmin, isAuthenticated, token } = useAuth()
 
     const showNotification = (type: NotificationType, message: string) => {
         setNotification({ type, message })
         setTimeout(() => setNotification(null), 5000)
     }
+    useEffect(() => {
+        if (isAdmin) {
+            router.push("/admin/admin/dashboard"); // o la ruta que prefieras
+        }
+    }, [isAdmin, router]);
 
     // Cargar producto
     useEffect(() => {

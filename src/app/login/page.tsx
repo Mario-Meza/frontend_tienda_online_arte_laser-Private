@@ -1,30 +1,33 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/Button"
 
-
 export default function LoginPage() {
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
-    const { login, isAuthenticated } = useAuth()
+    const { login, isAuthenticated, user, isAdmin, isLoading } = useAuth()
     const router = useRouter()
 
+    // ✅ Redirigir si ya está autenticado
     useEffect(() => {
-        if (isAuthenticated) {
-            router.push("/")
+        if (isAuthenticated && user) {
+            if (isAdmin) {
+                router.push("/admin/admin/dashboard") // o "/admin/dashboard"
+            } else {
+                router.push("/") // Página principal del cliente
+            }
         }
-    }, [isAuthenticated, router])
+    }, [isAuthenticated, user, isAdmin, router])
 
-    // Opcional: mostrar un loading mientras redirige
-    if (isAuthenticated) {
+    // Mostrar mensaje de carga
+    if (isAuthenticated && user) {
         return (
             <div className="container py-12 flex items-center justify-center min-h-[calc(100vh-64px)]">
                 <div className="text-center">Redirigiendo...</div>
@@ -39,7 +42,15 @@ export default function LoginPage() {
 
         try {
             await login(email, password)
-            router.push("/")
+
+            // ⚡ Espera un poco a que se actualice el contexto
+            setTimeout(() => {
+                if (isAdmin) {
+                    router.push("/admin/admin/dashboard")
+                } else {
+                    router.push("/")
+                }
+            }, 300)
         } catch (err) {
             setError(err instanceof Error ? err.message : "Error al iniciar sesión")
         } finally {
@@ -70,7 +81,8 @@ export default function LoginPage() {
                             required
                         />
                     </div>
-                    <Button type="submit" disabled={loading} variant="primary" className="w-full">
+
+                    <Button type="submit" disabled={loading || isLoading} variant="primary" className="w-full">
                         {loading ? "Cargando..." : "Iniciar Sesión"}
                     </Button>
                 </form>

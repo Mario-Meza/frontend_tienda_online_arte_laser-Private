@@ -53,9 +53,9 @@ export default function Navbar() {
 
                             <div className="flex items-center gap-3">
                                 <span className="text-sm">
-                                    <Link href="/customer/dashboard" className="hover:text-accent transition-colors">
+                                    <span className="hover:text-accent transition-colors">
                                         Hola, {user?.name}
-                                    </Link>
+                                    </span>
                                     {isAdmin && (
                                         <span className="ml-2 text-xs bg-yellow-500 text-black px-2 py-0.5 rounded">
                                             ADMIN
