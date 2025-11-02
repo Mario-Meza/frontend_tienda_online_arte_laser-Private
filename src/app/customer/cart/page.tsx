@@ -100,7 +100,7 @@ export default function CartPage() {
                     </svg>
                     <h2 className="text-2xl font-bold mb-4 text-gray-900">Tu carrito está vacío</h2>
                     <p className="text-gray-600 mb-6">Agrega productos para comenzar a comprar</p>
-                    <LinkButton href="/public/products" className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-2xl font-semibold hover:shadow-lg transition-all">
+                    <LinkButton href="/" className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-2xl font-semibold hover:shadow-lg transition-all">
                         Ver Productos
                     </LinkButton>
                 </div>
@@ -248,7 +248,7 @@ export default function CartPage() {
                             </Button>
 
                             <LinkButton
-                                href="/products"
+                                href="/"
                                 className="w-full text-center py-3 text-amber-700 hover:text-amber-900 font-medium transition-colors"
                             >
                                 ← Seguir Comprando

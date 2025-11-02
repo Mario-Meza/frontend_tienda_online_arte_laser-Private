@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/context/auth_context"
 import { Package, Truck, CheckCircle, XCircle, Clock, Eye, X, AlertCircle, RefreshCw } from "lucide-react"
 import Link from "next/link"
+import {Button} from "@/components/ui/Button";
 
 interface OrderDetail {
     product_id: string
@@ -115,6 +116,17 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
         setTimeout(() => setNotification(null), 5000)
     }
 
+    // Función auxiliar para enriquecer órdenes con nombres de productos
+    const enrichOrdersWithProducts = (orders: Order[], productsMap: Record<string, Product>): Order[] => {
+        return orders.map(order => ({
+            ...order,
+            details: order.details.map(detail => ({
+                ...detail,
+                product_name: productsMap[detail.product_id]?.name || 'Producto no disponible'
+            }))
+        }))
+    }
+
     // Cargar datos del cliente
     const fetchCustomerData = async () => {
         if (!user) return
@@ -139,6 +151,7 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
     }
 
     // Cargar productos para enriquecer las órdenes
+    // Cargar productos para enriquecer las órdenes
     const fetchProducts = async () => {
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/all`)
@@ -150,13 +163,15 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                 productsMap[product._id] = product
             })
             setProducts(productsMap)
+            return productsMap // 🔧 Retornar el mapa de productos
         } catch (err) {
             console.error("Error cargando productos:", err)
+            return {}
         }
     }
 
     // Cargar órdenes del usuario
-    const fetchOrders = async (showLoader = true) => {
+    const fetchOrders = async (showLoader = true, productsMap?: Record<string, Product>) => {
         if (!user) return
 
         if (showLoader) setLoading(true)
@@ -175,14 +190,11 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
             // Filtrar solo las órdenes del usuario actual
             const userOrders = data.filter((order) => order.customer_id === user._id)
 
+            // 🔧 Usar el mapa de productos pasado o el estado actual
+            const currentProducts = productsMap || products
+
             // Enriquecer con nombres de productos
-            const enrichedOrders = userOrders.map(order => ({
-                ...order,
-                details: order.details.map(detail => ({
-                    ...detail,
-                    product_name: products[detail.product_id]?.name || 'Producto no encontrado'
-                }))
-            }))
+            const enrichedOrders = enrichOrdersWithProducts(userOrders, currentProducts)
 
             // Ordenar por fecha (más recientes primero)
             enrichedOrders.sort((a, b) =>
@@ -198,24 +210,37 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
         }
     }
 
-    // Cargar datos iniciales
+    // Cargar datos iniciales - 🔧 Secuencia corregida
     useEffect(() => {
         if (user) {
-            Promise.all([
-                fetchProducts(),
+            const loadData = async () => {
+                // 1. Cargar productos primero
+                const productsMap = await fetchProducts()
+
+                // 2. Cargar órdenes con el mapa de productos
+                await fetchOrders(true, productsMap)
+
+                // 3. Cargar datos del cliente (no bloquea)
                 fetchCustomerData()
-            ]).then(() => {
-                fetchOrders()
-            })
+            }
+
+            loadData()
         }
     }, [user])
+
+    // 🔧 Efecto separado para re-enriquecer cuando cambien los productos
+    useEffect(() => {
+        if (orders.length > 0 && Object.keys(products).length > 0) {
+            setOrders(prevOrders => enrichOrdersWithProducts(prevOrders, products))
+        }
+    }, [products])
 
     // Polling automático cada 30 segundos
     useEffect(() => {
         if (!user) return
 
         const interval = setInterval(() => {
-            fetchOrders(false)
+            fetchOrders(false, products)
         }, 30000)
 
         return () => clearInterval(interval)
@@ -560,6 +585,13 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                                                 <p className="text-sm text-gray-600">
                                                     Cantidad: {detail.quantity} × ${detail.unit_price.toFixed(2)}
                                                 </p>
+                                                {/* 🔗 Enlace al producto */}
+                                                <Link
+                                                    href={`/public/products/${detail.product_id}`}
+                                                    className="text-sm font-medium text-blue-600 hover:underline"
+                                                >
+                                                    Ver producto
+                                                </Link>
                                             </div>
                                             <div className="font-semibold text-gray-900">
                                                 ${detail.subtotal.toFixed(2)}

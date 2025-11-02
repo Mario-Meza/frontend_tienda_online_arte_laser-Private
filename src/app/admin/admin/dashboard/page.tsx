@@ -105,7 +105,7 @@ export default function AdminDashboard() {
                                     Tienes {stats.pendingOrders} órdenes pendientes de procesar
                                 </p>
                             </div>
-                            <Link href="/admin/orders" className="btn btn-primary">
+                            <Link href="/admin/admin/orders" className="btn btn-primary">
                                 Ver Órdenes
                             </Link>
                         </div>
