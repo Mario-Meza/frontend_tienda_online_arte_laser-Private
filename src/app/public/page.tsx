@@ -21,8 +21,19 @@ export default function HomePage() {
     const [loading, setLoading] = useState(true)
     const [selectedCategory, setSelectedCategory] = useState('all')
     const { addItem, items } = useCart()
-    const { isAuthenticated } = useAuth()
     const router = useRouter()
+    const { isAuthenticated, user, isAdmin } = useAuth()
+
+    // ✅ Redirigir si ya está autenticado
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            if (isAdmin) {
+                router.push("/admin/admin/dashboard") // o "/admin/dashboard"
+            } else {
+                router.push("/") // Página principal del cliente
+            }
+        }
+    }, [isAuthenticated, user, isAdmin, router])
 
     useEffect(() => {
         const fetchProducts = async () => {

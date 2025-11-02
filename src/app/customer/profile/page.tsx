@@ -6,14 +6,25 @@ import { useState, useEffect } from "react"
 import { Button, LinkButton } from "@/components/ui/Button"
 
 export default function ProfilePage() {
-    const { user, token, isAuthenticated, logout } = useAuth()
     const router = useRouter()
     const [isEditing, setIsEditing] = useState(false)
+    const { token, isAuthenticated, user, isAdmin, logout } = useAuth()
     const [formData, setFormData] = useState({
         name: user?.name || "",
         email: user?.email || "",
         phone: user?.phone || "",
     })
+
+    // ✅ Redirigir si ya está autenticado
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            if (isAdmin) {
+                router.push("/admin/admin/dashboard") // o "/admin/dashboard"
+            } else {
+                router.push("/") // Página principal del cliente
+            }
+        }
+    }, [isAuthenticated, user, isAdmin, router])
 
     useEffect(() => {
         if (!isAuthenticated) {

@@ -1,14 +1,27 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import {useRouter, useSearchParams} from "next/navigation"
 import Link from "next/link"
+import {useAuth} from "@/context/auth_context";
 
 export default function PaymentSuccessPage() {
     const searchParams = useSearchParams()
     const sessionId = searchParams.get("session_id")
-    const [orderDetails, setOrderDetails] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const { isAuthenticated, user, isAdmin } = useAuth()
+    const router = useRouter()
+
+    // ✅ Redirigir si ya está autenticado
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            if (isAdmin) {
+                router.push("/admin/admin/dashboard") // o "/admin/dashboard"
+            } else {
+                router.push("/") // Página principal del cliente
+            }
+        }
+    }, [isAuthenticated, user, isAdmin, router])
 
     useEffect(() => {
         if (sessionId) {

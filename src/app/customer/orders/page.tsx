@@ -42,8 +42,20 @@ export default function OrdersPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
-    const { user, token, isAuthenticated, refreshUser } = useAuth()
+    const { user, token, isAuthenticated, isAdmin } = useAuth()
     const router = useRouter()
+
+
+    // ✅ Redirigir si ya está autenticado
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            if (isAdmin) {
+                router.push("/admin/admin/dashboard") // o "/admin/dashboard"
+            } else {
+                router.push("/") // Página principal del cliente
+            }
+        }
+    }, [isAuthenticated, user, isAdmin, router])
 
     const fetchOrders = async (showLoader = true) => {
         if (!user) {

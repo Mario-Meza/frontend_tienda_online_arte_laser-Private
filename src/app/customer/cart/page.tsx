@@ -17,7 +17,7 @@ export default function CartPage() {
     const router = useRouter()
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
-    const { login, isAuthenticated, user, isAdmin, isLoading } = useAuth()
+    const { isAuthenticated, user, isAdmin } = useAuth()
 
     // ✅ Redirigir si ya está autenticado
     useEffect(() => {

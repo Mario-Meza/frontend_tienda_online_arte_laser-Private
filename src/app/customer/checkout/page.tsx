@@ -3,16 +3,27 @@
 import { useCart } from "@/context/cart-context"
 import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import {useEffect, useState} from "react"
 import Link from "next/link"
 import { ShoppingBag, Lock, CreditCard, Package, User, Mail, Phone, Home, House, ArrowLeft, CheckCircle } from "lucide-react"
 
 export default function CheckoutPage() {
     const { items, total, clearCart } = useCart()
-    const { user, token, isAuthenticated } = useAuth()
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const { isAuthenticated, token, user, isAdmin } = useAuth()
+
+    // ✅ Redirigir si ya está autenticado
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            if (isAdmin) {
+                router.push("/admin/admin/dashboard") // o "/admin/dashboard"
+            } else {
+                router.push("/") // Página principal del cliente
+            }
+        }
+    }, [isAuthenticated, user, isAdmin, router])
 
     if (!isAuthenticated) {
         return (

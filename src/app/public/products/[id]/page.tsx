@@ -313,7 +313,7 @@ export default function ProductDetailPage() {
             {/* Breadcrumb */}
             <div className="container py-6">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <button onClick={() => router.push('/products')} className="hover:text-amber-600">
+                    <button onClick={() => router.push('/')} className="hover:text-amber-600">
                         Productos
                     </button>
                     <span>/</span>
