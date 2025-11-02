@@ -25,7 +25,7 @@ export default function CartPage() {
             if (isAdmin) {
                 router.push("/admin/admin/dashboard") // o "/admin/dashboard"
             } else {
-                router.push("/") // Página principal del cliente
+                router.push("/customer/cart") // Página principal del cliente
             }
         }
     }, [isAuthenticated, user, isAdmin, router])

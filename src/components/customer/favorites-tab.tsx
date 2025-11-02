@@ -217,7 +217,7 @@ export function FavoritesTab() {
                             Explora nuestros productos y guarda tus favoritos para verlos aquí
                         </p>
                         <button
-                            onClick={() => router.push('/public/products')}
+                            onClick={() => router.push('/')}
                             className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-full font-semibold hover:shadow-lg transition-all"
                         >
                             Explorar Productos

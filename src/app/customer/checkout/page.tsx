@@ -20,7 +20,7 @@ export default function CheckoutPage() {
             if (isAdmin) {
                 router.push("/admin/admin/dashboard") // o "/admin/dashboard"
             } else {
-                router.push("/") // Página principal del cliente
+                router.push("/customer/checkout") // Página principal del cliente
             }
         }
     }, [isAuthenticated, user, isAdmin, router])

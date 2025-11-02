@@ -53,7 +53,11 @@ export default function ProductsPage() {
         const fetchRatings = async () => {
             try {
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/rating`)
-                if (!response.ok) throw new Error("Error al cargar ratings")
+
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`)
+                }
+
                 const data = await response.json()
 
                 const grouped: Record<string, number[]> = {}
@@ -69,6 +73,8 @@ export default function ProductsPage() {
                 setRatings(avg)
             } catch (err) {
                 console.error("Error cargando ratings:", err)
+                // No mostramos error al usuario, solo lo logueamos
+                setRatings({})
             }
         }
         fetchRatings()
@@ -94,9 +100,13 @@ export default function ProductsPage() {
                     const data = await response.json()
                     const favProductIds = new Set(data.map((fav: any) => fav.product_id))
                     setFavorites(favProductIds)
+                } else if (response.status === 404) {
+                    // No hay favoritos todavía
+                    setFavorites(new Set())
                 }
             } catch (error) {
                 console.error("Error al cargar favoritos:", error)
+                setFavorites(new Set())
             }
         }
 
@@ -137,7 +147,7 @@ export default function ProductsPage() {
         e.stopPropagation() // Evitar que se abra la página de detalles
 
         if (!isAuthenticated || !token) {
-            showNotification('info', '🔐 Debes iniciar sesión para agregar favoritos')
+            showNotification('info', '🔒 Debes iniciar sesión para agregar favoritos')
             router.push("/login")
             return
         }
@@ -163,7 +173,7 @@ export default function ProductsPage() {
                         newSet.delete(productId)
                         return newSet
                     })
-                    showNotification('success', '💔 Eliminado de favoritos')
+                    showNotification('success', '🤍 Eliminado de favoritos')
                 }
             } else {
                 // AGREGAR favorito
@@ -269,7 +279,7 @@ export default function ProductsPage() {
                 {/* Header */}
                 {isAdmin && (
                     <div className="bg-orange-400 text-white text-center py-2 rounded-md mb-6 shadow-sm">
-                        ℹ️¡ATENCION! Estás viendo la vista pública de la tienda (modo administrador)
+                        ℹ️ ¡ATENCION! Estás viendo la vista pública de la tienda (modo administrador)
                     </div>
                 )}
                 <div className="text-center mb-12">

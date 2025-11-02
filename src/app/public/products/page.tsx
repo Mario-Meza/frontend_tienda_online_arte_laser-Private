@@ -37,6 +37,7 @@ export default function ProductsPage() {
         const fetchProducts = async () => {
             try {
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products`)
+
                 if (!response.ok) throw new Error("Error al cargar productos")
                 const data = await response.json()
                 setProducts(data)

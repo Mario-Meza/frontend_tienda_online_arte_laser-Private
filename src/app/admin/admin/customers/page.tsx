@@ -42,7 +42,6 @@ export default function AdminCustomersPage() {
         phone: "",
         address: "",
         role: "customer"
-
     })
     const [showPassword, setShowPassword] = useState(false)
     const [submitting, setSubmitting] = useState(false)
@@ -220,7 +219,6 @@ export default function AdminCustomersPage() {
                 address: formData.address || undefined,
             }
 
-            // Solo incluir password si se ingresó
             if (formData.password) {
                 body.password = formData.password
             }
@@ -242,7 +240,6 @@ export default function AdminCustomersPage() {
                 throw new Error(errorData.detail?.message || errorData.detail || "Error al actualizar cliente")
             }
 
-            // Actualizar role si cambió
             if (formData.role !== selectedCustomer.role) {
                 await updateCustomerRole(selectedCustomer._id, formData.role)
             }
@@ -317,11 +314,11 @@ export default function AdminCustomersPage() {
     if (loading) {
         return (
             <AdminRoute>
-                <div className="container py-12">
+                <div className="container py-12 max-w-7xl mx-auto px-4">
                     <div className="flex items-center justify-center min-h-[400px]">
                         <div className="text-center">
-                            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/30 border-t-primary mx-auto mb-4"></div>
-                            <p className="text-muted-foreground">Cargando clientes...</p>
+                            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+                            <p className="text-gray-600">Cargando clientes...</p>
                         </div>
                     </div>
                 </div>
@@ -331,37 +328,39 @@ export default function AdminCustomersPage() {
 
     return (
         <AdminRoute>
-            <div className="container py-12">
+            <div className="container py-8 max-w-7xl mx-auto px-4">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <h1 className="text-4xl font-bold mb-2">Gestión de Clientes</h1>
-                        <p className="text-muted-foreground">
-                            {filteredCustomers.length} {filteredCustomers.length === 1 ? 'cliente' : 'clientes'}
-                        </p>
+                <div className="mb-8">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-4xl font-bold mb-2">Gestión de Clientes</h1>
+                            <p className="text-gray-600">
+                                {filteredCustomers.length} {filteredCustomers.length === 1 ? 'cliente' : 'clientes'}
+                            </p>
+                        </div>
+                        <Button onClick={openCreateModal} className="flex items-center gap-2 whitespace-nowrap shrink-0">
+                            <Plus className="w-5 h-5" />
+                            Nuevo Cliente
+                        </Button>
                     </div>
-                    <Button onClick={openCreateModal} className="flex items-center gap-2">
-                        <Plus className="w-5 h-5" />
-                        Nuevo Cliente
-                    </Button>
                 </div>
 
                 {/* Búsqueda */}
-                <div className="mb-6">
+                <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
                     <div className="relative max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <Input
                             type="text"
                             placeholder="Buscar por nombre o email..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
+                            className="pl-10 w-full"
                         />
                     </div>
                 </div>
 
                 {/* Tabla de clientes */}
-                <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-gray-50 border-b border-gray-200">
@@ -398,22 +397,22 @@ export default function AdminCustomersPage() {
                                     <tr key={customer._id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold flex-shrink-0">
                                                     {customer.name.charAt(0).toUpperCase()}
                                                 </div>
-                                                <div>
+                                                <div className="min-w-0">
                                                     <div className="font-medium text-gray-900">{customer.name}</div>
                                                     <div className="text-sm text-gray-500 flex items-center gap-1">
-                                                        <Mail className="w-3 h-3" />
-                                                        {customer.email}
+                                                        <Mail className="w-3 h-3 flex-shrink-0" />
+                                                        <span className="truncate">{customer.email}</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 whitespace-nowrap">
                                             {customer.phone ? (
                                                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                                                    <Phone className="w-4 h-4" />
+                                                    <Phone className="w-4 h-4 flex-shrink-0" />
                                                     {customer.phone}
                                                 </div>
                                             ) : (
@@ -422,29 +421,29 @@ export default function AdminCustomersPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             {customer.address ? (
-                                                <div className="flex items-center gap-2 text-sm text-gray-600 max-w-xs truncate">
+                                                <div className="flex items-center gap-2 text-sm text-gray-600">
                                                     <MapPin className="w-4 h-4 flex-shrink-0" />
-                                                    {customer.address}
+                                                    <span className="line-clamp-1">{customer.address}</span>
                                                 </div>
                                             ) : (
                                                 <span className="text-sm text-gray-400">Sin dirección</span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                    customer.role === 'admin'
-                                                        ? 'bg-purple-100 text-purple-800'
-                                                        : 'bg-blue-100 text-blue-800'
-                                                }`}>
-                                                    {customer.role === 'admin' ? '👑 Admin' : '👤 Customer'}
-                                                </span>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                customer.role === 'admin'
+                                                    ? 'bg-purple-100 text-purple-800'
+                                                    : 'bg-blue-100 text-blue-800'
+                                            }`}>
+                                                {customer.role === 'admin' ? '👑 Admin' : '👤 Customer'}
+                                            </span>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             {customer.createdAt
                                                 ? new Date(customer.createdAt).toLocaleDateString('es-MX')
                                                 : 'N/A'}
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     onClick={() => openEditModal(customer)}
@@ -472,8 +471,8 @@ export default function AdminCustomersPage() {
 
                 {/* Modal Crear/Editar */}
                 {showModal && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+                        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto my-8">
                             <div className="p-6 border-b border-gray-200">
                                 <h2 className="text-2xl font-bold">
                                     {modalMode === 'create' ? 'Crear Nuevo Cliente' : 'Editar Cliente'}
@@ -481,7 +480,6 @@ export default function AdminCustomersPage() {
                             </div>
 
                             <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                                {/* Nombre */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                         <User className="w-4 h-4" />
@@ -497,7 +495,6 @@ export default function AdminCustomersPage() {
                                     />
                                 </div>
 
-                                {/* Email */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                         <Mail className="w-4 h-4" />
@@ -513,7 +510,6 @@ export default function AdminCustomersPage() {
                                     />
                                 </div>
 
-                                {/* Contraseña */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Contraseña {modalMode === 'edit' && '(dejar vacío para no cambiar)'}
@@ -537,7 +533,6 @@ export default function AdminCustomersPage() {
                                     </div>
                                 </div>
 
-                                {/* Teléfono */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                         <Phone className="w-4 h-4" />
@@ -552,7 +547,6 @@ export default function AdminCustomersPage() {
                                     />
                                 </div>
 
-                                {/* Dirección */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                         <MapPin className="w-4 h-4" />
@@ -567,7 +561,6 @@ export default function AdminCustomersPage() {
                                     />
                                 </div>
 
-                                {/* Role */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Tipo de usuario
@@ -583,7 +576,6 @@ export default function AdminCustomersPage() {
                                     </select>
                                 </div>
 
-                                {/* Botones */}
                                 <div className="flex gap-3 pt-4 border-t border-gray-200">
                                     <Button type="submit" disabled={submitting} className="flex-1">
                                         {submitting ? 'Guardando...' : modalMode === 'create' ? 'Crear Cliente' : 'Guardar Cambios'}

@@ -20,27 +20,31 @@ export default function Navbar() {
     return (
         <nav className="bg-orange-500 text-primary-foreground border-b border-neutral-200">
             <div className="container flex items-center justify-between h-16">
-                <Link href="/" className="text-2xl font-bold">
+                <Link href="/" prefetch={false} className="text-2xl font-bold">
                     Arte Láser
                 </Link>
 
                 <div className="flex items-center gap-6">
-                    {/* ✅ Home siempre visible */}
-                    <Link href="/" className="hover:text-accent transition-colors">
+                    {isAdmin ? (
+                        <></>
+                    ): (
+
+                        <Link href="/" prefetch={false} className="hover:text-accent transition-colors">
                         Inicio
-                    </Link>
+                        </Link>
+                    )}
 
                     {isAuthenticated ? (
                         <>
                             {isAdmin ? (
                                 <>
-                                    <Link href="/admin/admin/dashboard" className="hover:text-accent transition-colors">
+                                    <Link href="/admin/admin/dashboard" prefetch={false} className="hover:text-accent transition-colors">
                                         📊 Dashboard
                                     </Link>
                                 </>
                             ) : (
                                 <>
-                                    <Link href="/customer/cart" className="relative hover:text-accent transition-colors">
+                                    <Link href="/customer/cart" prefetch={false} className="relative hover:text-accent transition-colors">
                                         Carrito
                                         {itemCount > 0 && (
                                             <span className="absolute -top-2 -right-2 bg-accent text-accent-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -53,9 +57,15 @@ export default function Navbar() {
 
                             <div className="flex items-center gap-3">
                                 <span className="text-sm">
-                                    <span className="hover:text-accent transition-colors">
-                                        Hola, {user?.name}
-                                    </span>
+                                    {isAdmin ? (
+                                        // ✅ Si es admin, solo muestra el texto sin link
+                                        <>Hola, {user?.name}</>
+                                    ) : (
+                                        // ✅ Si es cliente, que sí sea un link
+                                        <Link href="/customer/dashboard" className="hover:text-accent transition-colors" prefetch={false}>
+                                            Hola, {user?.name}
+                                        </Link>
+                                    )}
                                     {isAdmin && (
                                         <span className="ml-2 text-xs bg-yellow-500 text-black px-2 py-0.5 rounded">
                                             ADMIN
