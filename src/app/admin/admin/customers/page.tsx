@@ -14,7 +14,8 @@ interface Customer {
     phone?: string
     address?: string
     role: string
-    createdAt?: string
+    created_at?: string
+    updated_at?: string
 }
 
 type NotificationType = 'success' | 'error' | 'info'
@@ -439,8 +440,8 @@ export default function AdminCustomersPage() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {customer.createdAt
-                                                ? new Date(customer.createdAt).toLocaleDateString('es-MX')
+                                            {customer.created_at
+                                                ? new Date(customer.created_at).toLocaleDateString('es-MX')
                                                 : 'N/A'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">

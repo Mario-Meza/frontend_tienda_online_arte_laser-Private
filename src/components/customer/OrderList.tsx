@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/context/auth_context"
 import { Package, Truck, CheckCircle, XCircle, Clock, Eye, X, AlertCircle, RefreshCw } from "lucide-react"
 import Link from "next/link"
-import {Button} from "@/components/ui/Button";
 
 interface OrderDetail {
     product_id: string
@@ -21,6 +20,7 @@ interface Order {
     order_date: string
     total: number
     details: OrderDetail[]
+    deleted?: boolean
 }
 
 interface Product {
@@ -43,12 +43,12 @@ interface Customer {
 
 const statusConfig = {
     pending: {
-        label: "Pendiente",
-        description: "Tu pedido está siendo procesado",
+        label: "Pendiente de pago",
+        description: "Completa el pago para procesar tu pedido",
         color: "bg-yellow-100 text-yellow-800 border-yellow-200",
         icon: Clock,
         step: 1,
-        canCancel: true
+        canCancel: false
     },
     processing: {
         label: "Procesando",
@@ -56,7 +56,7 @@ const statusConfig = {
         color: "bg-blue-100 text-blue-800 border-blue-200",
         icon: Package,
         step: 2,
-        canCancel: false
+        canCancel: true
     },
     sent: {
         label: "Enviado",
@@ -87,9 +87,10 @@ const statusConfig = {
 interface OrdersListProps {
     showHeader?: boolean
     maxOrders?: number
+    showCanceled?: boolean
 }
 
-export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
+export function OrdersList({ showHeader = true, maxOrders, showCanceled = false }: OrdersListProps) {
     const [orders, setOrders] = useState<Order[]>([])
     const [products, setProducts] = useState<Record<string, Product>>({})
     const [customerData, setCustomerData] = useState<Customer | null>(null)
@@ -116,7 +117,6 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
         setTimeout(() => setNotification(null), 5000)
     }
 
-    // Función auxiliar para enriquecer órdenes con nombres de productos
     const enrichOrdersWithProducts = (orders: Order[], productsMap: Record<string, Product>): Order[] => {
         return orders.map(order => ({
             ...order,
@@ -127,7 +127,6 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
         }))
     }
 
-    // Cargar datos del cliente
     const fetchCustomerData = async () => {
         if (!user) return
 
@@ -150,8 +149,6 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
         }
     }
 
-    // Cargar productos para enriquecer las órdenes
-    // Cargar productos para enriquecer las órdenes
     const fetchProducts = async () => {
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/all`)
@@ -163,14 +160,13 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                 productsMap[product._id] = product
             })
             setProducts(productsMap)
-            return productsMap // 🔧 Retornar el mapa de productos
+            return productsMap
         } catch (err) {
             console.error("Error cargando productos:", err)
             return {}
         }
     }
 
-    // Cargar órdenes del usuario
     const fetchOrders = async (showLoader = true, productsMap?: Record<string, Product>) => {
         if (!user) return
 
@@ -187,16 +183,19 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
             if (!response.ok) throw new Error("Error al cargar pedidos")
             const data: Order[] = await response.json()
 
-            // Filtrar solo las órdenes del usuario actual
-            const userOrders = data.filter((order) => order.customer_id === user._id)
+            let userOrders = data.filter((order) => order.customer_id === user._id)
 
-            // 🔧 Usar el mapa de productos pasado o el estado actual
+            if (!showCanceled) {
+                userOrders = userOrders.filter(order =>
+                    order.status !== 'canceled' &&
+                    order.status !== 'pending' &&
+                    !order.deleted
+                )
+            }
+
             const currentProducts = productsMap || products
-
-            // Enriquecer con nombres de productos
             const enrichedOrders = enrichOrdersWithProducts(userOrders, currentProducts)
 
-            // Ordenar por fecha (más recientes primero)
             enrichedOrders.sort((a, b) =>
                 new Date(b.order_date).getTime() - new Date(a.order_date).getTime()
             )
@@ -210,32 +209,23 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
         }
     }
 
-    // Cargar datos iniciales - 🔧 Secuencia corregida
     useEffect(() => {
         if (user) {
             const loadData = async () => {
-                // 1. Cargar productos primero
                 const productsMap = await fetchProducts()
-
-                // 2. Cargar órdenes con el mapa de productos
                 await fetchOrders(true, productsMap)
-
-                // 3. Cargar datos del cliente (no bloquea)
                 fetchCustomerData()
             }
-
             loadData()
         }
-    }, [user])
+    }, [user, showCanceled])
 
-    // 🔧 Efecto separado para re-enriquecer cuando cambien los productos
     useEffect(() => {
         if (orders.length > 0 && Object.keys(products).length > 0) {
             setOrders(prevOrders => enrichOrdersWithProducts(prevOrders, products))
         }
     }, [products])
 
-    // Polling automático cada 30 segundos
     useEffect(() => {
         if (!user) return
 
@@ -244,9 +234,8 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
         }, 30000)
 
         return () => clearInterval(interval)
-    }, [user, token, products])
+    }, [user, token, products, showCanceled])
 
-    // Cancelar orden
     const handleCancelOrder = async () => {
         if (!selectedOrder) return
 
@@ -257,8 +246,8 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                 {
                     method: "PATCH",
                     headers: {
+                        "Authorization": `Bearer ${token}`,
                         "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
                     },
                     body: JSON.stringify({ status: "canceled" }),
                 }
@@ -279,17 +268,9 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
         }
     }
 
-    // Reordenar - Agregar productos al carrito
     const handleReorder = async (order: Order) => {
         try {
-            // TODO: Implementar la lógica de tu carrito
-            // Ejemplo si tienes un contexto de carrito:
-            // const { addToCart } = useCart()
-            // for (const detail of order.details) {
-            //     await addToCart(detail.product_id, detail.quantity)
-            // }
-
-            showNotification('success', '🛒 Productos agregados al carrito')
+            showNotification('info', '🛒 Función de reordenar próximamente')
             console.log("Reordenando productos:", order.details)
         } catch (err) {
             showNotification('error', 'Error al reordenar')
@@ -349,13 +330,20 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
         return (
             <div className="text-center py-12 bg-white rounded-xl shadow-sm">
                 <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-bold mb-2">No tienes pedidos</h3>
+                <h3 className="text-xl font-bold mb-2">
+                    {showCanceled ? 'No tienes pedidos cancelados' : 'No tienes pedidos activos'}
+                </h3>
                 <p className="text-gray-600 mb-6">
-                    Comienza a comprar para ver tus pedidos aquí
+                    {showCanceled
+                        ? 'Todos tus pedidos están en buen estado'
+                        : 'Comienza a comprar para ver tus pedidos aquí'
+                    }
                 </p>
-                <Link href="/" className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    Ver Productos
-                </Link>
+                {!showCanceled && (
+                    <Link href="/" className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Ver Productos
+                    </Link>
+                )}
             </div>
         )
     }
@@ -390,7 +378,6 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
 
                     return (
                         <div key={order._id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                            {/* Header */}
                             <div className="p-6 border-b border-gray-200">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
@@ -424,7 +411,6 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                                 </div>
                             </div>
 
-                            {/* Progress Bar */}
                             {order.status !== 'canceled' && (
                                 <div className="px-6 py-4 bg-gray-50">
                                     <div className="flex items-center justify-between mb-2">
@@ -457,7 +443,6 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                                 </div>
                             )}
 
-                            {/* Products Preview */}
                             <div className="p-6 border-b border-gray-200">
                                 <div className="space-y-2">
                                     {order.details.slice(0, 2).map((detail, idx) => (
@@ -478,7 +463,6 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                                 </div>
                             </div>
 
-                            {/* Actions */}
                             <div className="p-4 bg-gray-50 flex items-center justify-between gap-3">
                                 <button
                                     onClick={() => openDetailModal(order)}
@@ -541,7 +525,6 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                         </div>
 
                         <div className="p-6 space-y-6">
-                            {/* Estado */}
                             <div>
                                 <h3 className="font-semibold mb-3">Estado del Pedido</h3>
                                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${statusConfig[selectedOrder.status as keyof typeof statusConfig].color}`}>
@@ -558,7 +541,6 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                                 </p>
                             </div>
 
-                            {/* Dirección de Envío */}
                             {customerData?.address && (
                                 <div className="bg-gray-50 p-4 rounded-lg">
                                     <h3 className="font-semibold mb-2 flex items-center gap-2">
@@ -574,7 +556,6 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                                 </div>
                             )}
 
-                            {/* Productos */}
                             <div>
                                 <h3 className="font-semibold mb-3">Productos</h3>
                                 <div className="space-y-3">
@@ -585,7 +566,6 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                                                 <p className="text-sm text-gray-600">
                                                     Cantidad: {detail.quantity} × ${detail.unit_price.toFixed(2)}
                                                 </p>
-                                                {/* 🔗 Enlace al producto */}
                                                 <Link
                                                     href={`/public/products/${detail.product_id}`}
                                                     className="text-sm font-medium text-blue-600 hover:underline"
@@ -601,7 +581,6 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                                 </div>
                             </div>
 
-                            {/* Total */}
                             <div className="border-t pt-4">
                                 <div className="flex items-center justify-between text-xl">
                                     <span className="font-bold">Total:</span>
@@ -611,7 +590,6 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                                 </div>
                             </div>
 
-                            {/* Botones de Acción */}
                             <div className="border-t pt-4 flex gap-3">
                                 {statusConfig[selectedOrder.status as keyof typeof statusConfig].canCancel && (
                                     <button
@@ -663,7 +641,7 @@ export function OrdersList({ showHeader = true, maxOrders }: OrdersListProps) {
                                     ¿Estás seguro de que deseas cancelar el pedido <span className="font-mono font-semibold">#{selectedOrder._id.slice(-8).toUpperCase()}</span>?
                                 </p>
                                 <p className="text-sm text-gray-500 mt-2">
-                                    Esta acción no se puede deshacer y el stock se restaurará.
+                                    Esta acción no se puede deshacer.
                                 </p>
                             </div>
                         </div>

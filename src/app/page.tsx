@@ -24,6 +24,21 @@ interface Product {
     updated_at?: string
 }
 
+interface Rating {
+    product_id: string
+    customer_id: string
+    score: number
+    comment: string
+    createdAt?: string
+    updatedAt?: string
+}
+
+interface Favorites {
+    product_id: string
+    customer_id: string
+    created_at? : string
+    updatedAt? : string
+}
 type NotificationType = 'success' | 'error' | 'info'
 
 export default function ProductsPage() {
@@ -61,7 +76,7 @@ export default function ProductsPage() {
                 const data = await response.json()
 
                 const grouped: Record<string, number[]> = {}
-                data.forEach((r: any) => {
+                data.forEach((r: Rating) => {
                     if (!grouped[r.product_id]) grouped[r.product_id] = []
                     grouped[r.product_id].push(r.score)
                 })
@@ -97,8 +112,8 @@ export default function ProductsPage() {
                 )
 
                 if (response.ok) {
-                    const data = await response.json()
-                    const favProductIds = new Set(data.map((fav: any) => fav.product_id))
+                    const data: Favorites[] = await response.json()
+                    const favProductIds = new Set<string>(data.map((fav) => fav.product_id))
                     setFavorites(favProductIds)
                 } else if (response.status === 404) {
                     // No hay favoritos todavía
@@ -126,11 +141,17 @@ export default function ProductsPage() {
                 )
 
                 if (!response.ok) throw new Error("Error al cargar productos")
+
                 const data = await response.json()
                 setProducts(Array.isArray(data) ? data : [])
-            } catch (err: any) {
-                if (err.name !== "AbortError") {
-                    setError(err instanceof Error ? err.message : "Error desconocido")
+            } catch (err: unknown) {
+                // Ignorar si fue cancelado manualmente
+                if (err instanceof DOMException && err.name === "AbortError") return
+
+                if (err instanceof Error) {
+                    setError(err.message)
+                } else {
+                    setError("Error desconocido")
                 }
             } finally {
                 setLoading(false)
@@ -138,8 +159,10 @@ export default function ProductsPage() {
         }
 
         fetchProducts()
+
         return () => controller.abort()
     }, [])
+
 
 
     // Toggle favorito (agregar o eliminar)

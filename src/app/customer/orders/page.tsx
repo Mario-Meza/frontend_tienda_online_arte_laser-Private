@@ -30,7 +30,7 @@ const statusColors: Record<string, string> = {
 }
 
 const statusLabels: Record<string, string> = {
-    pending: "Pendiente",
+    pending: "Pendiente de pago",
     processing: "Procesando",
     sent: "Enviado",
     delivered: "Entregado",
@@ -42,17 +42,14 @@ export default function OrdersPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+    const [showCanceled, setShowCanceled] = useState(false) // ✅ Toggle para mostrar cancelados
     const { user, token, isAuthenticated, isAdmin } = useAuth()
     const router = useRouter()
 
-
-    // ✅ Redirigir si ya está autenticado
     useEffect(() => {
         if (isAuthenticated && user) {
             if (isAdmin) {
-                router.push("/admin/admin/dashboard") // o "/admin/dashboard"
-            } else {
-                router.push("/") // Página principal del cliente
+                router.push("/admin/admin/dashboard")
             }
         }
     }, [isAuthenticated, user, isAdmin, router])
@@ -88,7 +85,6 @@ export default function OrdersPage() {
         }
     }
 
-    // ✅ Carga inicial
     useEffect(() => {
         if (!isAuthenticated) {
             router.push("/login")
@@ -100,19 +96,17 @@ export default function OrdersPage() {
         }
     }, [isAuthenticated, user])
 
-    // ✅ Polling automático cada 10 segundos
     useEffect(() => {
         if (!isAuthenticated || !user) return
 
         const interval = setInterval(() => {
             console.log("🔄 Actualizando pedidos automáticamente...")
-            fetchOrders(false) // No mostrar loader en actualizaciones automáticas
-        }, 10000) // 10 segundos
+            fetchOrders(false)
+        }, 10000)
 
         return () => clearInterval(interval)
     }, [isAuthenticated, user, token])
 
-    // ✅ Refrescar cuando la página vuelve a estar visible (cambio de pestaña)
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && user) {
@@ -147,6 +141,11 @@ export default function OrdersPage() {
         )
     }
 
+    // ✅ Filtrar órdenes eliminadas/canceladas por defecto
+    const filteredOrders = showCanceled
+        ? orders
+        : orders.filter(order => order.status !== 'canceled' && order.status !== 'pending')
+
     if (orders.length === 0) {
         return (
             <div className="container py-12">
@@ -165,15 +164,37 @@ export default function OrdersPage() {
 
     return (
         <div className="container py-12">
-            <div className="flex items-center justify-between mb-12">
-                <h1 className="text-4xl font-bold">Mis Pedidos</h1>
-                <p className="text-sm text-muted-foreground">
-                    Última actualización: {lastUpdate.toLocaleTimeString("es-ES")}
-                </p>
+            <div className="flex items-center justify-between mb-8">
+                <div>
+                    <h1 className="text-4xl font-bold">Mis Pedidos</h1>
+                    <p className="text-sm text-muted-foreground mt-2">
+                        Última actualización: {lastUpdate.toLocaleTimeString("es-ES")}
+                    </p>
+                </div>
+
+                {/* ✅ Toggle para mostrar/ocultar cancelados */}
+                <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={showCanceled}
+                        onChange={(e) => setShowCanceled(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300"
+                    />
+                    <span className="text-sm text-gray-600">Mostrar cancelados</span>
+                </label>
             </div>
 
+            {filteredOrders.length === 0 && !showCanceled && (
+                <div className="card text-center">
+                    <p className="text-muted-foreground">
+                        No tienes pedidos activos.
+                        {orders.length > 0 && " Activa 'Mostrar cancelados' para ver pedidos cancelados."}
+                    </p>
+                </div>
+            )}
+
             <div className="space-y-6">
-                {orders.map((order) => (
+                {filteredOrders.map((order) => (
                     <div key={order._id} className="card">
                         <div className="flex items-center justify-between mb-6 pb-6 border-b border-border">
                             <div>
