@@ -126,12 +126,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             const data = await response.json()
+
             setToken(data.access_token)
+
             localStorage.setItem("auth_token", data.access_token)
+
             await fetchCurrentUser(data.access_token)
 
-            // ✅ Agregar esto para forzar re-render
-            window.location.reload()
 
         } catch (error) {
             console.error("Error en login:", error)
