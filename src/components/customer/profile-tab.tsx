@@ -21,6 +21,7 @@ export function ProfileTab() {
 
     const [formData, setFormData] = useState({
         name: user?.name || "",
+        last_name: user?.last_name || "",
         email: user?.email || "",
         phone: user?.phone || "",
         address: user?.address || "",
@@ -37,6 +38,7 @@ export function ProfileTab() {
         if (user) {
             setFormData({
                 name: user.name || "",
+                last_name: user.last_name || "",
                 email: user.email || "",
                 phone: user.phone || "",
                 address: user.address || "",
@@ -115,6 +117,7 @@ export function ProfileTab() {
                     },
                     body: JSON.stringify({
                         name: formData.name,
+                        last_name: formData.last_name,
                         email: formData.email,
                         phone: formData.phone || undefined,
                         address: formData.address || undefined,
@@ -185,6 +188,7 @@ export function ProfileTab() {
     const handleCancel = () => {
         setFormData({
             name: user?.name || "",
+            last_name: user?.last_name || "",
             email: user?.email || "",
             phone: user?.phone || "",
             address: user?.address || "",
@@ -231,6 +235,23 @@ export function ProfileTab() {
                             />
                         ) : (
                             <p className="text-muted-foreground">{formData.name || "No especificado"}</p>
+                        )}
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            Apellidos
+                        </label>
+                        {isEditing ? (
+                            <Input
+                                type="text"
+                                name="last_name"
+                                value={formData.last_name}
+                                onChange={handleInputChange}
+                                placeholder="Apellidos"
+                            />
+                        ) : (
+                            <p className="text-muted-foreground">{formData.last_name || "No especificado"}</p>
                         )}
                     </div>
 

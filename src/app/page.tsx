@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react"
 import { useCart } from "@/context/cart-context"
 import { useAuth } from "@/context/auth_context"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/Button"
 import { StarRating } from "@/components/ui/Stars"
-import { Heart } from "lucide-react"
-
+import { Heart } from 'lucide-react'
+import { HeroSlider } from "@/components/ui/hero-slider"
+import { Footer } from "@/components/ui/footer"
 
 interface Product {
     _id: string
@@ -314,6 +315,8 @@ export default function ProductsPage() {
                     </p>
                 </div>
 
+                <HeroSlider />
+
                 {/* Barra de búsqueda */}
                 <div className="flex justify-center mb-8">
                     <input
@@ -372,8 +375,10 @@ export default function ProductsPage() {
                                         </div>
                                     ) : (
                                         <img
-                                            src={getProductImage(product)}
+                                            src={getProductImage(product) || "/placeholder.svg"}
                                             alt={product.name}
+                                            width={500}
+                                            height={500}
                                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                             onError={() => handleImageError(product._id)}
                                         />
@@ -534,6 +539,7 @@ export default function ProductsPage() {
                     animation: slide-in 0.3s ease-out;
                 }
             `}</style>
+            <Footer/>
         </div>
     )
 }

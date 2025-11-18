@@ -10,6 +10,7 @@ import { Search, Plus, Edit, Trash2, Mail, Phone, MapPin, User, Eye, EyeOff } fr
 interface Customer {
     _id: string
     name: string
+    last_name: string
     email: string
     phone?: string
     address?: string
@@ -39,6 +40,7 @@ export default function AdminCustomersPage() {
     const [formData, setFormData] = useState({
         name: "",
         email: "",
+        last_name: "",
         password: "",
         phone: "",
         address: "",
@@ -98,6 +100,7 @@ export default function AdminCustomersPage() {
         setModalMode('create')
         setFormData({
             name: "",
+            last_name: "",
             email: "",
             password: "",
             phone: "",
@@ -112,6 +115,7 @@ export default function AdminCustomersPage() {
         setSelectedCustomer(customer)
         setFormData({
             name: customer.name,
+            last_name: customer.last_name,
             email: customer.email,
             password: "",
             phone: customer.phone || "",
@@ -187,6 +191,7 @@ export default function AdminCustomersPage() {
                     },
                     body: JSON.stringify({
                         name: formData.name,
+                        last_name: formData.last_name,
                         email: formData.email,
                         password: formData.password,
                         phone: formData.phone || undefined,
@@ -215,6 +220,7 @@ export default function AdminCustomersPage() {
         try {
             const body: any = {
                 name: formData.name,
+                last_name: formData.last_name,
                 email: formData.email,
                 phone: formData.phone || undefined,
                 address: formData.address || undefined,
@@ -492,6 +498,20 @@ export default function AdminCustomersPage() {
                                         value={formData.name}
                                         onChange={handleInputChange}
                                         placeholder="Nombre del cliente"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                                        <User className="w-4 h-4" />
+                                        Apellidos
+                                    </label>
+                                    <Input
+                                        type="text"
+                                        name="last_name"
+                                        value={formData.last_name}
+                                        onChange={handleInputChange}
+                                        placeholder="Appellidos del cliente"
                                         required
                                     />
                                 </div>
