@@ -9,41 +9,39 @@ import { Button, LinkButton } from "@/components/ui/Button"
 interface Product {
     _id: string
     stock: number
+    shipping_cost?: number
 }
 
 export default function CartPage() {
     const { items, removeItem, updateQuantity, total, clearCart } = useCart()
-
     const router = useRouter()
     const [products, setProducts] = useState<Product[]>([])
     const [loading, setLoading] = useState(true)
     const { isAuthenticated, user, isAdmin } = useAuth()
 
-    // ✅ Redirigir si ya está autenticado
+    // Redirigir según rol
     useEffect(() => {
         if (isAuthenticated && user) {
             if (isAdmin) {
-                router.push("/admin/admin/dashboard") // o "/admin/dashboard"
+                router.push("/admin/admin/dashboard")
             } else {
-                router.push("/customer/cart") // Página principal del cliente
+                router.push("/customer/cart")
             }
         }
     }, [isAuthenticated, user, isAdmin, router])
 
-    // ✅ Obtener stock actual de los productos
+    // Obtener productos con información de envío
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                // ✅ Usar el mismo endpoint que products page
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/all`)
                 if (response.ok) {
                     const data = await response.json()
-                    // ✅ Asegurar que siempre sea un array
                     setProducts(Array.isArray(data) ? data : [])
                 }
             } catch (error) {
                 console.error("Error al cargar productos:", error)
-                setProducts([]) // ✅ En caso de error, establecer array vacío
+                setProducts([])
             } finally {
                 setLoading(false)
             }
@@ -56,28 +54,47 @@ export default function CartPage() {
         }
     }, [items.length])
 
-    // ✅ Función para obtener el stock de un producto con validación
-    const getProductStock = (productId: string): number => {
-        // ✅ CRÍTICO: Validar que products sea un array antes de usar .find()
-        if (!Array.isArray(products) || products.length === 0) return 0
+    // ✅ Obtener información del producto
+    const getProductInfo = (productId: string) => {
+        if (!Array.isArray(products) || products.length === 0)
+            return { stock: 0, shippingCost: 0 }
 
         const product = products.find(p => p._id === productId)
-        return product?.stock || 0
+        return {
+            stock: product?.stock || 0,
+            shippingCost: product?.shipping_cost || 0
+        }
     }
 
-    // ✅ Manejar incremento de cantidad con validación de stock
-    const handleIncrement = (productId: string, currentQuantity: number) => {
-        const availableStock = getProductStock(productId)
+    // ✅ Calcular totales CON ENVÍO INTELIGENTE
+    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 
-        if (currentQuantity >= availableStock) {
-            alert(`No hay más stock disponible. Máximo: ${availableStock} unidades`)
+    // 📦 REGLAS DE ENVÍO (igual que backend)
+    const FREE_SHIPPING_THRESHOLD = 300.0
+
+    // Obtener el costo de envío MÁS ALTO (no se suma por cantidad)
+    const maxShippingCost = items.reduce((max, item) => {
+        const { shippingCost } = getProductInfo(item.product_id)
+        return Math.max(max, shippingCost)
+    }, 0)
+
+    // Si subtotal >= $300 → envío gratis, sino se cobra el más alto
+    const shippingTotal = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : maxShippingCost
+
+    const grandTotal = subtotal + shippingTotal
+
+    // Manejadores
+    const handleIncrement = (productId: string, currentQuantity: number) => {
+        const { stock } = getProductInfo(productId)
+
+        if (currentQuantity >= stock) {
+            alert(`No hay más stock disponible. Máximo: ${stock} unidades`)
             return
         }
 
         updateQuantity(productId, currentQuantity + 1)
     }
 
-    // ✅ Manejar decremento de cantidad
     const handleDecrement = (productId: string, currentQuantity: number) => {
         if (currentQuantity > 1) {
             updateQuantity(productId, currentQuantity - 1)
@@ -135,14 +152,13 @@ export default function CartPage() {
                     {/* Lista de productos */}
                     <div className="lg:col-span-2 space-y-4">
                         {items.map((item) => {
-                            const availableStock = getProductStock(item.product_id)
-                            const isOutOfStock = availableStock === 0
-                            const isMaxReached = item.quantity >= availableStock
+                            const { stock, shippingCost } = getProductInfo(item.product_id)
+                            const isOutOfStock = stock === 0
+                            const isMaxReached = item.quantity >= stock
 
                             return (
                                 <div key={item.product_id} className="bg-white rounded-3xl p-6 shadow-lg hover:shadow-xl transition-all">
                                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                                        {/* Imagen del producto */}
                                         {item.image && (
                                             <img
                                                 src={item.image}
@@ -151,12 +167,17 @@ export default function CartPage() {
                                             />
                                         )}
 
-                                        {/* Info del producto */}
                                         <div className="flex-grow">
                                             <h3 className="font-bold text-lg text-gray-900">{item.name}</h3>
                                             <p className="text-gray-600">${item.price.toFixed(2)} c/u</p>
 
-                                            {/* Indicador de stock */}
+                                            {/* ✅ Mostrar costo de envío */}
+                                            {shippingCost > 0 && (
+                                                <p className="text-sm text-blue-600 mt-1">
+                                                    📦 Envío: ${shippingCost.toFixed(2)} por unidad
+                                                </p>
+                                            )}
+
                                             {loading ? (
                                                 <p className="text-xs text-gray-400 mt-1">Verificando stock...</p>
                                             ) : (
@@ -164,15 +185,14 @@ export default function CartPage() {
                                                     {isOutOfStock ? (
                                                         <p className="text-xs text-rose-600 font-semibold">⚠️ Sin stock disponible</p>
                                                     ) : isMaxReached ? (
-                                                        <p className="text-xs text-amber-600 font-semibold">⚠️ Stock máximo alcanzado ({availableStock} disponibles)</p>
+                                                        <p className="text-xs text-amber-600 font-semibold">⚠️ Stock máximo alcanzado ({stock} disponibles)</p>
                                                     ) : (
-                                                        <p className="text-xs text-gray-500">{availableStock} disponibles</p>
+                                                        <p className="text-xs text-gray-500">{stock} disponibles</p>
                                                     )}
                                                 </div>
                                             )}
                                         </div>
 
-                                        {/* Controles de cantidad */}
                                         <div className="flex items-center gap-4">
                                             <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
                                                 <button
@@ -201,12 +221,10 @@ export default function CartPage() {
                                                 </button>
                                             </div>
 
-                                            {/* Subtotal */}
                                             <span className="font-bold text-xl text-gray-900 w-28 text-right">
-                                                ${(item.price * item.quantity).toFixed(2)}
+                                                ${((item.price + shippingCost) * item.quantity).toFixed(2)}
                                             </span>
 
-                                            {/* Botón eliminar */}
                                             <button
                                                 onClick={() => removeItem(item.product_id)}
                                                 className="text-rose-500 hover:text-rose-700 transition-colors p-2"
@@ -231,16 +249,23 @@ export default function CartPage() {
                             <div className="space-y-4 mb-6 pb-6 border-b border-gray-200">
                                 <div className="flex justify-between text-gray-700">
                                     <span>Subtotal ({items.reduce((sum, item) => sum + item.quantity, 0)} productos):</span>
-                                    <span className="font-semibold">${total.toFixed(2)}</span>
+                                    <span className="font-semibold">${subtotal.toFixed(2)}</span>
                                 </div>
+
+                                {/* ✅ Mostrar envío */}
                                 <div className="flex justify-between text-gray-700">
                                     <span>Envío:</span>
-                                    <span className="text-emerald-600 font-semibold">Gratis</span>
+                                    {shippingTotal > 0 ? (
+                                        <span className="font-semibold text-blue-600">${shippingTotal.toFixed(2)}</span>
+                                    ) : (
+                                        <span className="text-emerald-600 font-semibold">Gratis</span>
+                                    )}
                                 </div>
+
                                 <div className="flex justify-between text-xl font-bold text-gray-900 pt-4">
                                     <span>Total:</span>
                                     <span className="bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-orange-600">
-                                        ${total.toFixed(2)}
+                                        ${grandTotal.toFixed(2)}
                                     </span>
                                 </div>
                             </div>

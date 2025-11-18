@@ -11,6 +11,7 @@ export default function RegisterPage() {
     const [step, setStep] = useState(1) // 1: Email, 2: Código, 3: Registro
     const [email, setEmail] = useState("")
     const [name, setName] = useState("")
+    const [last_name, setLastName] = useState("")
     const [code, setCode] = useState("")
     const [password, setPassword] = useState("")
     const [error, setError] = useState<string | null>(null)
@@ -18,6 +19,7 @@ export default function RegisterPage() {
     const [successMessage, setSuccessMessage] = useState<string | null>(null)
     const { register, isAuthenticated, login } = useAuth()
     const router = useRouter()
+
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -38,7 +40,7 @@ export default function RegisterPage() {
             const response = await fetch(`${API_URL}/api/v1/customers/send-verification-code`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, name })
+                body: JSON.stringify({ email, name, last_name })
             })
 
             const data = await response.json()
@@ -99,7 +101,7 @@ export default function RegisterPage() {
             const registerResponse = await fetch(`${API_URL}/api/v1/customers/register-verified`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password, name })
+                body: JSON.stringify({ email, password, name, last_name })
             })
 
             const registerData = await registerResponse.json()
@@ -132,7 +134,7 @@ export default function RegisterPage() {
             const response = await fetch(`${API_URL}/api/v1/customers/send-verification-code`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, name })
+                body: JSON.stringify({ email, name, last_name })
             })
 
             if (!response.ok) throw new Error("Error al reenviar código")
@@ -196,6 +198,18 @@ export default function RegisterPage() {
                                 placeholder="Tu nombre completo"
                             />
                         </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">Apellidos</label>
+                            <input
+                                type="text"
+                                value={last_name}
+                                onChange={(e) => setLastName(e.target.value)}
+                                className="input"
+                                required
+                                minLength={2}
+                                placeholder="Apellidos"
+                            />
+                        </div>
 
                         <div>
                             <label className="block text-sm font-medium mb-2">Email</label>
@@ -211,7 +225,7 @@ export default function RegisterPage() {
 
                         <Button
                             onClick={handleSendCode}
-                            disabled={loading || !name || !email}
+                            disabled={loading || !name || !email || !last_name}
                             variant="primary"
                             className="w-full"
                         >

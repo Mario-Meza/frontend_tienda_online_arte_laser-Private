@@ -3,9 +3,14 @@
 import { useCart } from "@/context/cart-context"
 import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
-import {useEffect, useState} from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ShoppingBag, Lock, CreditCard, Package, User, Mail, Phone, Home, House, ArrowLeft, CheckCircle } from "lucide-react"
+import { ShoppingBag, Lock, CreditCard, Package, User, Mail, Phone, Home, ArrowLeft, CheckCircle, Truck } from "lucide-react"
+
+interface Product {
+    _id: string
+    shipping_cost?: number
+}
 
 export default function CheckoutPage() {
     const { items, total, clearCart } = useCart()
@@ -13,17 +18,57 @@ export default function CheckoutPage() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const { isAuthenticated, token, user, isAdmin } = useAuth()
+    const [products, setProducts] = useState<Product[]>([])
 
-    // ✅ Redirigir si ya está autenticado
+    // Redirigir según rol
     useEffect(() => {
         if (isAuthenticated && user) {
             if (isAdmin) {
-                router.push("/admin/admin/dashboard") // o "/admin/dashboard"
+                router.push("/admin/admin/dashboard")
             } else {
-                router.push("/customer/checkout") // Página principal del cliente
+                router.push("/customer/checkout")
             }
         }
     }, [isAuthenticated, user, isAdmin, router])
+
+    // ✅ Obtener información de envío de productos
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/all`)
+                if (response.ok) {
+                    const data = await response.json()
+                    setProducts(Array.isArray(data) ? data : [])
+                }
+            } catch (error) {
+                console.error("Error al cargar productos:", error)
+            }
+        }
+
+        if (items.length > 0) {
+            fetchProducts()
+        }
+    }, [items.length])
+
+    // ✅ Calcular totales CON ENVÍO INTELIGENTE
+    const FREE_SHIPPING_THRESHOLD = 300.0  // 🔑 Umbral de envío gratis
+    const getProductShipping = (productId: string): number => {
+        const product = products.find(p => p._id === productId)
+        return product?.shipping_cost || 0
+    }
+
+    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+
+    // Obtener el costo de envío MÁS ALTO (no se suma por cantidad)
+    const maxShippingCost = items.reduce((max, item) => {
+        const shippingCost = getProductShipping(item.product_id)
+        return Math.max(max, shippingCost)
+    }, 0)
+
+    // Si subtotal >= $300 → envío gratis, sino se cobra el más alto
+    const shippingTotal = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : maxShippingCost
+
+    const grandTotal = subtotal + shippingTotal
 
     if (!isAuthenticated) {
         return (
@@ -76,6 +121,7 @@ export default function CheckoutPage() {
                     product_id: item.product_id,
                     quantity: item.quantity,
                 })),
+                shipping_address: user?.address || "No especificada" // ✅ Enviar dirección
             }
 
             const orderResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders`, {
@@ -118,7 +164,6 @@ export default function CheckoutPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 py-12">
             <div className="container max-w-7xl mx-auto px-4">
-                {/* Header con breadcrumb */}
                 <div className="mb-8">
                     <Link
                         href="/cart"
@@ -134,7 +179,6 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Columna izquierda - Información */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Información de envío */}
                         <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
@@ -152,14 +196,12 @@ export default function CheckoutPage() {
                                         <User className="w-4 h-4 text-amber-600" />
                                         Nombre Completo
                                     </label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            value={user?.name || ""}
-                                            disabled
-                                            className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-700 font-medium"
-                                        />
-                                    </div>
+                                    <input
+                                        type="text"
+                                        value={user?.name || ""}
+                                        disabled
+                                        className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-700 font-medium"
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
@@ -188,10 +230,10 @@ export default function CheckoutPage() {
                                 <div className="space-y-2">
                                     <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                                         <Home className="w-4 h-4 text-amber-600" />
-                                        Dirección
+                                        Dirección de Envío
                                     </label>
                                     <input
-                                        type="tel"
+                                        type="text"
                                         value={user?.address || "No registrado"}
                                         disabled
                                         className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-700 font-medium"
@@ -215,33 +257,42 @@ export default function CheckoutPage() {
                             </div>
                             <div className="p-8">
                                 <div className="space-y-4">
-                                    {items.map((item) => (
-                                        <div key={item.product_id} className="flex gap-4 pb-4 border-b border-gray-100 last:border-0">
-                                            <img
-                                                src={item.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&q=10'}
-                                                alt={item.name}
-                                                className="w-20 h-20 object-cover rounded-xl"
-                                            />
-                                            <div className="flex-1">
-                                                <p className="font-semibold text-gray-900 mb-1">{item.name}</p>
-                                                <p className="text-sm text-gray-500">Cantidad: {item.quantity}</p>
-                                                <p className="text-sm text-amber-600 font-semibold mt-1">
-                                                    ${item.price.toFixed(2)} c/u
-                                                </p>
+                                    {items.map((item) => {
+                                        const shippingCost = getProductShipping(item.product_id)
+                                        return (
+                                            <div key={item.product_id} className="flex gap-4 pb-4 border-b border-gray-100 last:border-0">
+                                                <img
+                                                    src={item.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&q=10'}
+                                                    alt={item.name}
+                                                    className="w-20 h-20 object-cover rounded-xl"
+                                                />
+                                                <div className="flex-1">
+                                                    <p className="font-semibold text-gray-900 mb-1">{item.name}</p>
+                                                    <p className="text-sm text-gray-500">Cantidad: {item.quantity}</p>
+                                                    <p className="text-sm text-amber-600 font-semibold mt-1">
+                                                        ${item.price.toFixed(2)} c/u
+                                                    </p>
+                                                    {shippingCost > 0 && (
+                                                        <p className="text-xs text-blue-600 flex items-center gap-1 mt-1">
+                                                            <Truck className="w-3 h-3" />
+                                                            Envío: ${(shippingCost * item.quantity).toFixed(2)}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="font-bold text-xl text-gray-900">
+                                                        ${((item.price + shippingCost) * item.quantity).toFixed(2)}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-xl text-gray-900">
-                                                    ${(item.price * item.quantity).toFixed(2)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Columna derecha - Resumen de pago */}
+                    {/* Resumen de pago */}
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-3xl shadow-xl overflow-hidden sticky top-6">
                             <div className="bg-gradient-to-r from-rose-500 to-pink-500 p-6">
@@ -268,19 +319,26 @@ export default function CheckoutPage() {
                                 <div className="space-y-4 mb-6 pb-6 border-b-2 border-gray-100">
                                     <div className="flex justify-between items-center">
                                         <span className="text-gray-600">Subtotal:</span>
-                                        <span className="font-semibold text-gray-900">${total.toFixed(2)}</span>
+                                        <span className="font-semibold text-gray-900">${subtotal.toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-gray-600">Envío:</span>
-                                        <span className="font-semibold text-emerald-600 flex items-center gap-1">
-                                            <CheckCircle className="w-4 h-4" />
-                                            Gratis
+                                        <span className="text-gray-600 flex items-center gap-1">
+                                            <Truck className="w-4 h-4" />
+                                            Envío:
                                         </span>
+                                        {shippingTotal > 0 ? (
+                                            <span className="font-semibold text-blue-600">${shippingTotal.toFixed(2)}</span>
+                                        ) : (
+                                            <span className="font-semibold text-emerald-600 flex items-center gap-1">
+                                                <CheckCircle className="w-4 h-4" />
+                                                Gratis
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="flex justify-between items-center pt-2">
                                         <span className="text-xl font-bold text-gray-900">Total:</span>
                                         <span className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-rose-600">
-                                            ${total.toFixed(2)}
+                                            ${grandTotal.toFixed(2)}
                                         </span>
                                     </div>
                                 </div>

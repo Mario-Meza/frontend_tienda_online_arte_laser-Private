@@ -120,7 +120,7 @@ export default function AdminDashboard() {
                             <div className="text-center">
                                 <div className="text-4xl mb-3">📦</div>
                                 <h3 className="font-bold mb-2">Gestionar Productos</h3>
-                                <p className="text-sm text-muted">Ver y editar productos</p>
+                                <p className="text-sm text-gray-500">Ver y editar productos</p>
                             </div>
                         </Link>
 
@@ -128,7 +128,7 @@ export default function AdminDashboard() {
                             <div className="text-center">
                                 <div className="text-4xl mb-3">📋</div>
                                 <h3 className="font-bold mb-2">Gestionar Órdenes</h3>
-                                <p className="text-sm text-muted">Ver y actualizar órdenes</p>
+                                <p className="text-sm text-gray-500">Ver y actualizar órdenes</p>
                             </div>
                         </Link>
 
@@ -136,7 +136,7 @@ export default function AdminDashboard() {
                             <div className="text-center">
                                 <div className="text-4xl mb-3">👥</div>
                                 <h3 className="font-bold mb-2">Ver Clientes</h3>
-                                <p className="text-sm text-muted">Administrar usuarios</p>
+                                <p className="text-sm text-gray-500">Administrar usuarios</p>
                             </div>
                         </Link>
                     </div>
