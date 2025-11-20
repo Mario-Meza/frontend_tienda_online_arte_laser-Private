@@ -423,10 +423,10 @@ export default function ProductDetailPage() {
 
                             {product.full_description && (
                                 <div className="mb-6 p-4 bg-gray-50 rounded-2xl">
-                                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Descripción</h3>
-                                    <p className="text-gray-600 leading-relaxed">
+                                    <h3 className="text-lg font-semibold text-gray-800 mb-3">Descripción</h3>
+                                    <div className="text-gray-600 leading-relaxed space-y-2 whitespace-pre-wrap">
                                         {product.full_description}
-                                    </p>
+                                    </div>
                                 </div>
                             )}
 

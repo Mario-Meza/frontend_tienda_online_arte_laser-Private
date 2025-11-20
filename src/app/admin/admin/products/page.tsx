@@ -608,10 +608,23 @@ export default function AdminProductsPage() {
                                         name="full_description"
                                         value={formData.full_description}
                                         onChange={handleInputChange}
-                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                                        rows={4}
-                                        placeholder="Describe el producto..."
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-sans"
+                                        rows={8}
+                                        maxLength={5000}
+                                        placeholder="Describe el producto en detalle...
+
+                                    ✅ Puedes usar saltos de línea
+                                    ✅ Puedes usar emojis
+                                    ✅ Organiza la información en párrafos"
                                     />
+                                    <div className="flex justify-between items-center mt-1">
+                                        <p className="text-xs text-gray-500">
+                                            {formData.full_description?.length || 0}/5000 caracteres
+                                        </p>
+                                        <p className="text-xs text-gray-400">
+                                            Usa Enter para separar párrafos
+                                        </p>
+                                    </div>
                                 </div>
 
                                 {/* Materiales */}

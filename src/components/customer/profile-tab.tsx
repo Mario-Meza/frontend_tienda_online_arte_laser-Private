@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { useState, useEffect } from "react"
-import { Eye, EyeOff, User, Mail, Phone, MapPin, Lock } from "lucide-react"
+import { Eye, EyeOff, User, Mail, Phone, MapPin, Lock, Home, Navigation } from 'lucide-react'
 
 type NotificationType = 'success' | 'error' | 'info'
 
@@ -24,7 +24,13 @@ export function ProfileTab() {
         last_name: user?.last_name || "",
         email: user?.email || "",
         phone: user?.phone || "",
-        address: user?.address || "",
+        street: user?.address?.street || "",
+        number: user?.address?.number || "",
+        references: user?.address?.references || "",
+        postal_code: user?.address?.postal_code || "",
+        city: user?.address?.city || "",
+        state: user?.address?.state || "",
+        country: user?.address?.country || "México",
     })
 
     const [passwordData, setPasswordData] = useState({
@@ -33,7 +39,15 @@ export function ProfileTab() {
         confirmPassword: "",
     })
 
-    // Actualizar formData cuando cambie el usuario
+    const mexicanStates = [
+        "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
+        "Chihuahua", "Ciudad de México", "Coahuila", "Colima", "Durango", "Guanajuato",
+        "Guerrero", "Hidalgo", "Jalisco", "Estado de México", "Michoacán", "Morelos",
+        "Nayarit", "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo",
+        "San Luis Potosí", "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala",
+        "Veracruz", "Yucatán", "Zacatecas"
+    ]
+
     useEffect(() => {
         if (user) {
             setFormData({
@@ -41,7 +55,13 @@ export function ProfileTab() {
                 last_name: user.last_name || "",
                 email: user.email || "",
                 phone: user.phone || "",
-                address: user.address || "",
+                street: user?.address?.street || "",
+                number: user?.address?.number || "",
+                references: user?.address?.references || "",
+                postal_code: user?.address?.postal_code || "",
+                city: user?.address?.city || "",
+                state: user?.address?.state || "",
+                country: user?.address?.country || "México",
             })
         }
     }, [user])
@@ -51,7 +71,7 @@ export function ProfileTab() {
         setTimeout(() => setNotification(null), 5000)
     }
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({
             ...formData,
             [e.target.name]: e.target.value
@@ -107,6 +127,37 @@ export function ProfileTab() {
 
         setLoading(true)
         try {
+            // Construir el objeto address solo si hay al menos un campo de dirección
+            const hasAddressData = formData.street || formData.number || formData.references ||
+                formData.postal_code || formData.city || formData.state;
+
+            const updatePayload: any = {
+                name: formData.name,
+                last_name: formData.last_name,
+                email: formData.email,
+            };
+
+            // Solo incluir phone si tiene valor
+            if (formData.phone) {
+                updatePayload.phone = formData.phone;
+            }
+
+            // Solo incluir address si hay datos de dirección
+            if (hasAddressData) {
+                updatePayload.address = {
+                    street: formData.street || "",
+                    number: formData.number || "",
+                    references: formData.references || "",
+                    postal_code: formData.postal_code || "",
+                    city: formData.city || "",
+                    state: formData.state || "",
+                    country: formData.country || "México",
+                    phone: formData.phone || ""
+                };
+            }
+
+            console.log("Enviando datos:", updatePayload); // Para debug
+
             const response = await fetch(
                 `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/${user?._id}`,
                 {
@@ -115,25 +166,19 @@ export function ProfileTab() {
                         "Content-Type": "application/json",
                         "Authorization": `Bearer ${token}`
                     },
-                    body: JSON.stringify({
-                        name: formData.name,
-                        last_name: formData.last_name,
-                        email: formData.email,
-                        phone: formData.phone || undefined,
-                        address: formData.address || undefined,
-                    })
+                    body: JSON.stringify(updatePayload)
                 }
             )
 
             if (!response.ok) {
                 const errorData = await response.json()
-                throw new Error(errorData.detail || "Error al actualizar perfil")
+                console.error("Error del servidor:", errorData); // Para debug
+                throw new Error(errorData.detail?.message || errorData.detail || "Error al actualizar perfil")
             }
 
-            showNotification('success', '✅ Perfil actualizado correctamente')
+            showNotification('success', 'Perfil actualizado correctamente')
             setIsEditing(false)
 
-            // Refrescar datos del usuario
             if (refreshUser) {
                 await refreshUser()
             }
@@ -170,7 +215,7 @@ export function ProfileTab() {
                 throw new Error(errorData.detail || "Error al cambiar contraseña")
             }
 
-            showNotification('success', '✅ Contraseña actualizada correctamente')
+            showNotification('success', 'Contraseña actualizada correctamente')
             setIsChangingPassword(false)
             setPasswordData({
                 currentPassword: "",
@@ -191,7 +236,13 @@ export function ProfileTab() {
             last_name: user?.last_name || "",
             email: user?.email || "",
             phone: user?.phone || "",
-            address: user?.address || "",
+            street: user?.address?.street || "",
+            number: user?.address?.number || "",
+            references: user?.address?.references || "",
+            postal_code: user?.address?.postal_code || "",
+            city: user?.address?.city || "",
+            state: user?.address?.state || "",
+            country: user?.address?.country || "México",
         })
         setIsEditing(false)
     }
@@ -206,7 +257,7 @@ export function ProfileTab() {
     }
 
     return (
-        <div className="max-w-2xl space-y-6">
+        <div className="max-w-3xl space-y-6">
             {/* Información Personal */}
             <Card>
                 <CardHeader>
@@ -219,97 +270,84 @@ export function ProfileTab() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    {/* Nombre */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                            <User className="w-4 h-4" />
-                            Nombre completo
-                        </label>
-                        {isEditing ? (
-                            <Input
-                                type="text"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleInputChange}
-                                placeholder="Tu nombre completo"
-                            />
-                        ) : (
-                            <p className="text-muted-foreground">{formData.name || "No especificado"}</p>
-                        )}
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                            <User className="w-4 h-4" />
-                            Apellidos
-                        </label>
-                        {isEditing ? (
-                            <Input
-                                type="text"
-                                name="last_name"
-                                value={formData.last_name}
-                                onChange={handleInputChange}
-                                placeholder="Apellidos"
-                            />
-                        ) : (
-                            <p className="text-muted-foreground">{formData.last_name || "No especificado"}</p>
-                        )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Nombre */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                                <User className="w-4 h-4" />
+                                Nombre completo
+                            </label>
+                            {isEditing ? (
+                                <Input
+                                    type="text"
+                                    name="name"
+                                    value={formData.name}
+                                    onChange={handleInputChange}
+                                    placeholder="Tu nombre completo"
+                                />
+                            ) : (
+                                <p className="text-muted-foreground">{formData.name || "No especificado"}</p>
+                            )}
+                        </div>
+
+                        {/* Apellidos */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                                <User className="w-4 h-4" />
+                                Apellidos
+                            </label>
+                            {isEditing ? (
+                                <Input
+                                    type="text"
+                                    name="last_name"
+                                    value={formData.last_name}
+                                    onChange={handleInputChange}
+                                    placeholder="Apellidos"
+                                />
+                            ) : (
+                                <p className="text-muted-foreground">{formData.last_name || "No especificado"}</p>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Email */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                            <Mail className="w-4 h-4" />
-                            Email
-                        </label>
-                        {isEditing ? (
-                            <Input
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleInputChange}
-                                placeholder="tu@email.com"
-                            />
-                        ) : (
-                            <p className="text-muted-foreground">{formData.email || "No especificado"}</p>
-                        )}
-                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Email */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                                <Mail className="w-4 h-4" />
+                                Email
+                            </label>
+                            {isEditing ? (
+                                <Input
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
+                                    onChange={handleInputChange}
+                                    placeholder="tu@email.com"
+                                />
+                            ) : (
+                                <p className="text-muted-foreground">{formData.email || "No especificado"}</p>
+                            )}
+                        </div>
 
-                    {/* Teléfono */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                            <Phone className="w-4 h-4" />
-                            Teléfono
-                        </label>
-                        {isEditing ? (
-                            <Input
-                                type="tel"
-                                name="phone"
-                                value={formData.phone}
-                                onChange={handleInputChange}
-                                placeholder="(123) 456-7890"
-                            />
-                        ) : (
-                            <p className="text-muted-foreground">{formData.phone || "No especificado"}</p>
-                        )}
-                    </div>
-
-                    {/* Dirección */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                            <MapPin className="w-4 h-4" />
-                            Dirección
-                        </label>
-                        {isEditing ? (
-                            <Input
-                                type="text"
-                                name="address"
-                                value={formData.address}
-                                onChange={handleInputChange}
-                                placeholder="Calle, número, colonia, ciudad"
-                            />
-                        ) : (
-                            <p className="text-muted-foreground">{formData.address || "No especificado"}</p>
-                        )}
+                        {/* Teléfono */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                                <Phone className="w-4 h-4" />
+                                Teléfono
+                            </label>
+                            {isEditing ? (
+                                <Input
+                                    type="tel"
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={handleInputChange}
+                                    placeholder="(123) 456-7890"
+                                />
+                            ) : (
+                                <p className="text-muted-foreground">{formData.phone || "No especificado"}</p>
+                            )}
+                        </div>
                     </div>
 
                     {/* Botones */}
@@ -326,6 +364,175 @@ export function ProfileTab() {
                         ) : (
                             <Button onClick={() => setIsEditing(true)}>
                                 Editar perfil
+                            </Button>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <MapPin className="w-5 h-5" />
+                        Dirección de Envío
+                    </CardTitle>
+                    <CardDescription>
+                        Dirección para la entrega de tus pedidos
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Calle */}
+                        <div className="md:col-span-2 space-y-2">
+                            <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                                <Home className="w-4 h-4" />
+                                Calle
+                            </label>
+                            {isEditing ? (
+                                <Input
+                                    type="text"
+                                    name="street"
+                                    value={formData.street}
+                                    onChange={handleInputChange}
+                                    placeholder="Nombre de la calle"
+                                />
+                            ) : (
+                                <p className="text-muted-foreground">{formData.street || "No especificado"}</p>
+                            )}
+                        </div>
+
+                        {/* Número */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">
+                                Número
+                            </label>
+                            {isEditing ? (
+                                <Input
+                                    type="text"
+                                    name="number"
+                                    value={formData.number}
+                                    onChange={handleInputChange}
+                                    placeholder="Número"
+                                />
+                            ) : (
+                                <p className="text-muted-foreground">{formData.number || "No especificado"}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Referencias */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                            <Navigation className="w-4 h-4" />
+                            Referencias
+                        </label>
+                        {isEditing ? (
+                            <Input
+                                type="text"
+                                name="references"
+                                value={formData.references}
+                                onChange={handleInputChange}
+                                placeholder="Entre qué calles, frente a qué, etc."
+                            />
+                        ) : (
+                            <p className="text-muted-foreground">{formData.references || "No especificado"}</p>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Código Postal */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">
+                                Código Postal
+                            </label>
+                            {isEditing ? (
+                                <Input
+                                    type="text"
+                                    name="postal_code"
+                                    value={formData.postal_code}
+                                    onChange={handleInputChange}
+                                    placeholder="12345"
+                                />
+                            ) : (
+                                <p className="text-muted-foreground">{formData.postal_code || "No especificado"}</p>
+                            )}
+                        </div>
+
+                        {/* Ciudad */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">
+                                Ciudad
+                            </label>
+                            {isEditing ? (
+                                <Input
+                                    type="text"
+                                    name="city"
+                                    value={formData.city}
+                                    onChange={handleInputChange}
+                                    placeholder="Ciudad"
+                                />
+                            ) : (
+                                <p className="text-muted-foreground">{formData.city || "No especificado"}</p>
+                            )}
+                        </div>
+
+                        {/* Estado */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-foreground">
+                                Estado
+                            </label>
+                            {isEditing ? (
+                                <select
+                                    name="state"
+                                    value={formData.state}
+                                    onChange={handleInputChange}
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                >
+                                    <option value="">Selecciona un estado</option>
+                                    {mexicanStates.map((state) => (
+                                        <option key={state} value={state}>
+                                            {state}
+                                        </option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <p className="text-muted-foreground">{formData.state || "No especificado"}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* País */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">
+                            País
+                        </label>
+                        {isEditing ? (
+                            <Input
+                                type="text"
+                                name="country"
+                                value={formData.country}
+                                onChange={handleInputChange}
+                                placeholder="País"
+                            />
+                        ) : (
+                            <p className="text-muted-foreground">{formData.country || "No especificado"}</p>
+                        )}
+                    </div>
+
+                    {/* Botones */}
+                    <div className="flex gap-3 pt-4 border-t border-border">
+                        {isEditing ? (
+                            <>
+                                <Button onClick={handleSaveProfile} disabled={loading}>
+                                    {loading ? "Guardando..." : "Guardar cambios"}
+                                </Button>
+                                <Button onClick={handleCancel} disabled={loading}>
+                                    Cancelar
+                                </Button>
+                            </>
+                        ) : (
+                            <Button onClick={() => setIsEditing(true)}>
+                                Editar dirección
                             </Button>
                         )}
                     </div>

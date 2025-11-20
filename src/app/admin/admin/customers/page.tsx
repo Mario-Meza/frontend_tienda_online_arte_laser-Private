@@ -5,7 +5,16 @@ import { useAuth } from "@/context/auth_context"
 import { AdminRoute } from "@/components/shared/AdminRoute"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
-import { Search, Plus, Edit, Trash2, Mail, Phone, MapPin, User, Eye, EyeOff } from "lucide-react"
+import { Search, Plus, Edit, Trash2, Mail, Phone, MapPin, User, Eye, EyeOff } from 'lucide-react'
+
+interface Address {
+    street?: string;
+    references?: string;
+    postal_code?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+}
 
 interface Customer {
     _id: string
@@ -13,7 +22,7 @@ interface Customer {
     last_name: string
     email: string
     phone?: string
-    address?: string
+    address?: string | Address
     role: string
     created_at?: string
     updated_at?: string
@@ -36,14 +45,19 @@ export default function AdminCustomersPage() {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null)
 
-    // Form data
     const [formData, setFormData] = useState({
         name: "",
         email: "",
         last_name: "",
         password: "",
         phone: "",
-        address: "",
+
+        street: "",
+        references: "",
+        postal_code: "",
+        city: "",
+        state: "",
+        country: "México",
         role: "customer"
     })
     const [showPassword, setShowPassword] = useState(false)
@@ -104,7 +118,13 @@ export default function AdminCustomersPage() {
             email: "",
             password: "",
             phone: "",
-            address: "",
+
+            street: "",
+            references: "",
+            postal_code: "",
+            city: "",
+            state: "",
+            country: "México",
             role: "customer"
         })
         setShowModal(true)
@@ -113,13 +133,48 @@ export default function AdminCustomersPage() {
     const openEditModal = (customer: Customer) => {
         setModalMode('edit')
         setSelectedCustomer(customer)
+        // Attempt to pre-fill structured address fields if available, otherwise use the general address field
+        let street = ""
+        let references = ""
+        let postal_code = ""
+        let city = ""
+        let state = ""
+        let country = "México"; // Default
+
+        // Verifica si address es un objeto Address
+        if (customer.address && typeof customer.address === "object") {
+            street = customer.address.street || ""
+            references = customer.address.references || ""
+            postal_code = customer.address.postal_code || ""
+            city = customer.address.city || ""
+            state = customer.address.state || ""
+            country = customer.address.country || "México"
+        }
+
+        // Basic parsing logic for the old 'address' field if structured fields are empty
+        if (typeof customer.address === "string" && customer.address){
+            const parts = customer.address.split(',');
+            street = parts[0]?.trim() || "";
+            if (parts.length > 1) references = parts.slice(1, -3).join(',').trim() || ""
+            postal_code = parts[parts.length - 3]?.trim() || "";
+            city = parts[parts.length - 2]?.trim() || "";
+            state = parts[parts.length - 1]?.trim() || "";
+        }
+
+
         setFormData({
             name: customer.name,
             last_name: customer.last_name,
             email: customer.email,
             password: "",
             phone: customer.phone || "",
-            address: customer.address || "",
+
+            street: street,
+            references: references,
+            postal_code: postal_code,
+            city: city,
+            state: state,
+            country: country,
             role: customer.role
         })
         setShowModal(true)
@@ -132,15 +187,34 @@ export default function AdminCustomersPage() {
     }
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value
-        })
-    }
+            [name]: value
+        });
+    };
+
+    // Helper to aggregate structured address into a single string for API submission if needed
+    const getAggregatedAddress = () => {
+        const parts: string[] = [];
+        if (formData.street) parts.push(formData.street);
+        if (formData.references) parts.push(formData.references);
+        if (formData.city) parts.push(formData.city);
+        if (formData.state) parts.push(formData.state);
+        if (formData.postal_code) parts.push(formData.postal_code);
+        if (formData.country && formData.country !== "México") parts.push(formData.country);
+
+        return parts.join(', ');
+    };
+
 
     const validateForm = () => {
         if (!formData.name.trim()) {
             showNotification('error', 'El nombre es requerido')
+            return false
+        }
+        if (!formData.last_name.trim()) {
+            showNotification('error', 'El apellido es requerido')
             return false
         }
         if (!formData.email.trim()) {
@@ -159,6 +233,25 @@ export default function AdminCustomersPage() {
         if (formData.password && formData.password.length < 6) {
             showNotification('error', 'La contraseña debe tener al menos 6 caracteres')
             return false
+        }
+        // Basic validation for address fields if any of them are filled
+        if (formData.street || formData.references || formData.postal_code || formData.city || formData.state || formData.country) {
+            if (!formData.street.trim()) {
+                showNotification('error', 'La calle y número son requeridos si se proporciona una dirección')
+                return false;
+            }
+            if (!formData.postal_code.trim()) {
+                showNotification('error', 'El código postal es requerido')
+                return false;
+            }
+            if (!formData.city.trim()) {
+                showNotification('error', 'La ciudad es requerida')
+                return false;
+            }
+            if (!formData.state.trim()) {
+                showNotification('error', 'El estado es requerido')
+                return false;
+            }
         }
         return true
     }
@@ -179,8 +272,19 @@ export default function AdminCustomersPage() {
         }
     }
 
+// 4. Actualiza createCustomer para enviar solo el objeto Address
     const createCustomer = async () => {
         try {
+            // Construye el objeto Address solo si hay datos
+            const addressData = formData.street ? {
+                street: formData.street,
+                references: formData.references || undefined,
+                postal_code: formData.postal_code,
+                city: formData.city,
+                state: formData.state,
+                country: formData.country || "México"
+            } : undefined
+
             const response = await fetch(
                 `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/admin/create-with-role?role=${formData.role}`,
                 {
@@ -195,7 +299,7 @@ export default function AdminCustomersPage() {
                         email: formData.email,
                         password: formData.password,
                         phone: formData.phone || undefined,
-                        address: formData.address || undefined,
+                        address: addressData // ✅ Envía el objeto completo o undefined
                     })
                 }
             )
@@ -214,16 +318,27 @@ export default function AdminCustomersPage() {
         }
     }
 
+// 5. Actualiza updateCustomer de la misma forma
     const updateCustomer = async () => {
         if (!selectedCustomer) return
 
         try {
+            // Construye el objeto Address solo si hay datos
+            const addressData = formData.street ? {
+                street: formData.street,
+                references: formData.references || undefined,
+                postal_code: formData.postal_code,
+                city: formData.city,
+                state: formData.state,
+                country: formData.country || "México"
+            } : undefined
+
             const body: any = {
                 name: formData.name,
                 last_name: formData.last_name,
                 email: formData.email,
                 phone: formData.phone || undefined,
-                address: formData.address || undefined,
+                address: addressData // ✅ Solo envía el objeto Address, no campos duplicados
             }
 
             if (formData.password) {
@@ -429,8 +544,15 @@ export default function AdminCustomersPage() {
                                         <td className="px-6 py-4">
                                             {customer.address ? (
                                                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                                                    <MapPin className="w-4 h-4 flex-shrink-0" />
-                                                    <span className="line-clamp-1">{customer.address}</span>
+                                                    <MapPin className="w-4 h-4" />
+
+                                                    {typeof customer.address === "string" ? (
+                                                        <span className="line-clamp-1">{customer.address}</span>
+                                                    ) : (
+                                                        <span className="line-clamp-1">
+                                                            {customer.address.street}, {customer.address.city}, {customer.address.state}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <span className="text-sm text-gray-400">Sin dirección</span>
@@ -479,129 +601,316 @@ export default function AdminCustomersPage() {
                 {/* Modal Crear/Editar */}
                 {showModal && (
                     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-                        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto my-8">
-                            <div className="p-6 border-b border-gray-200">
-                                <h2 className="text-2xl font-bold">
-                                    {modalMode === 'create' ? 'Crear Nuevo Cliente' : 'Editar Cliente'}
+                        <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto my-8 shadow-2xl">
+                            <div className="sticky top-0 bg-gradient-to-r from-amber-50 to-orange-50 px-8 py-6 border-b border-gray-200 rounded-t-3xl">
+                                <h2 className="text-3xl font-bold text-gray-900">
+                                    {modalMode === 'create' ? '✨ Crear Nuevo Cliente' : '✏️ Editar Cliente'}
                                 </h2>
+                                <p className="text-sm text-gray-600 mt-1">
+                                    {modalMode === 'create'
+                                        ? 'Completa la información para agregar un nuevo cliente'
+                                        : 'Actualiza los detalles del cliente'
+                                    }
+                                </p>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                                        <User className="w-4 h-4" />
-                                        Nombre completo
-                                    </label>
-                                    <Input
-                                        type="text"
-                                        name="name"
-                                        value={formData.name}
-                                        onChange={handleInputChange}
-                                        placeholder="Nombre del cliente"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                                        <User className="w-4 h-4" />
-                                        Apellidos
-                                    </label>
-                                    <Input
-                                        type="text"
-                                        name="last_name"
-                                        value={formData.last_name}
-                                        onChange={handleInputChange}
-                                        placeholder="Appellidos del cliente"
-                                        required
-                                    />
-                                </div>
+                            <form onSubmit={handleSubmit} className="p-8">
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                                        <Mail className="w-4 h-4" />
-                                        Email
-                                    </label>
-                                    <Input
-                                        type="email"
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={handleInputChange}
-                                        placeholder="email@ejemplo.com"
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Contraseña {modalMode === 'edit' && '(dejar vacío para no cambiar)'}
-                                    </label>
-                                    <div className="relative">
-                                        <Input
-                                            type={showPassword ? "text" : "password"}
-                                            name="password"
-                                            value={formData.password}
-                                            onChange={handleInputChange}
-                                            placeholder={modalMode === 'create' ? "Mínimo 6 caracteres" : "Nueva contraseña (opcional)"}
-                                            required={modalMode === 'create'}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                        >
-                                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                        </button>
+                                {/* Información Personal */}
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-sm">
+                                            1
+                                        </div>
+                                        Información Personal
+                                    </h3>
+                                    <div className="bg-gray-50 rounded-2xl p-6 space-y-5">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Nombre <span className="text-rose-500">*</span>
+                                                </label>
+                                                <Input
+                                                    type="text"
+                                                    name="name"
+                                                    value={formData.name}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Ej: Juan"
+                                                    required
+                                                    className="h-12 border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Apellidos <span className="text-rose-500">*</span>
+                                                </label>
+                                                <Input
+                                                    type="text"
+                                                    name="last_name"
+                                                    value={formData.last_name}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Ej: Pérez García"
+                                                    required
+                                                    className="h-12 border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                                        <Phone className="w-4 h-4" />
-                                        Teléfono (opcional)
-                                    </label>
-                                    <Input
-                                        type="tel"
-                                        name="phone"
-                                        value={formData.phone}
-                                        onChange={handleInputChange}
-                                        placeholder="(123) 456-7890"
-                                    />
+                                {/* Información de Cuenta */}
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-sm">
+                                            2
+                                        </div>
+                                        Información de Cuenta
+                                    </h3>
+                                    <div className="bg-gray-50 rounded-2xl p-6 space-y-5">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                                <Mail className="w-4 h-4 text-amber-600" />
+                                                Email <span className="text-rose-500">*</span>
+                                            </label>
+                                            <Input
+                                                type="email"
+                                                name="email"
+                                                value={formData.email}
+                                                onChange={handleInputChange}
+                                                placeholder="correo@ejemplo.com"
+                                                required
+                                                className="h-12 border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1.5">
+                                                Este será el correo para iniciar sesión
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                Contraseña {modalMode === 'edit' && <span className="font-normal text-gray-500">(opcional, dejar vacío para mantener actual)</span>}
+                                                {modalMode === 'create' && <span className="text-rose-500">*</span>}
+                                            </label>
+                                            <div className="relative">
+                                                <Input
+                                                    type={showPassword ? "text" : "password"}
+                                                    name="password"
+                                                    value={formData.password}
+                                                    onChange={handleInputChange}
+                                                    placeholder={modalMode === 'create' ? "Mínimo 6 caracteres" : "Dejar vacío para no cambiar"}
+                                                    required={modalMode === 'create'}
+                                                    className="h-12 pr-12 border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-600 transition-colors p-1.5 rounded-lg hover:bg-amber-50"
+                                                >
+                                                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                                </button>
+                                            </div>
+                                            {modalMode === 'create' && (
+                                                <p className="text-xs text-gray-500 mt-1.5">
+                                                    Debe contener al menos 6 caracteres
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                Tipo de Usuario
+                                            </label>
+                                            <select
+                                                name="role"
+                                                value={formData.role}
+                                                onChange={handleInputChange}
+                                                className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white transition-all"
+                                            >
+                                                <option value="customer">👤 Cliente Regular</option>
+                                                <option value="admin">👑 Administrador</option>
+                                            </select>
+                                            <p className="text-xs text-gray-500 mt-1.5">
+                                                Los administradores tienen acceso completo al sistema
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                                        <MapPin className="w-4 h-4" />
-                                        Dirección (opcional)
-                                    </label>
-                                    <Input
-                                        type="text"
-                                        name="address"
-                                        value={formData.address}
-                                        onChange={handleInputChange}
-                                        placeholder="Calle, número, colonia, ciudad"
-                                    />
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white text-sm">
+                                            3
+                                        </div>
+                                        Dirección de Envío
+                                        <span className="text-sm font-normal text-gray-500">(Opcional)</span>
+                                    </h3>
+                                    <div className="bg-gray-50 rounded-2xl p-6 space-y-5">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                Calle y Número
+                                            </label>
+                                            <Input
+                                                type="text"
+                                                name="street"
+                                                value={formData.street}
+                                                onChange={handleInputChange}
+                                                placeholder="Ej: Av. Reforma 123"
+                                                className="h-12 border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                Referencias
+                                            </label>
+                                            <Input
+                                                type="text"
+                                                name="references"
+                                                value={formData.references}
+                                                onChange={handleInputChange}
+                                                placeholder="Ej: Edificio azul, Depto 3B, entre calles..."
+                                                className="h-12 border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1.5">
+                                                Información adicional para facilitar la entrega
+                                            </p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Código Postal
+                                                </label>
+                                                <Input
+                                                    type="text"
+                                                    name="postal_code"
+                                                    value={formData.postal_code}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Ej: 06500"
+                                                    maxLength={5}
+                                                    className="h-12 border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Municipio o alcaldía
+                                                </label>
+                                                <Input
+                                                    type="text"
+                                                    name="city"
+                                                    value={formData.city}
+                                                    onChange={handleInputChange}
+                                                    placeholder="Ej: Ciudad de México"
+                                                    className="h-12 border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    Estado
+                                                </label>
+                                                <select
+                                                    name="state"
+                                                    value={formData.state}
+                                                    onChange={handleInputChange}
+                                                    className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white transition-all"
+                                                >
+                                                    <option value="">Selecciona un estado</option>
+                                                    <option value="Aguascalientes">Aguascalientes</option>
+                                                    <option value="Baja California">Baja California</option>
+                                                    <option value="Baja California Sur">Baja California Sur</option>
+                                                    <option value="Campeche">Campeche</option>
+                                                    <option value="Chiapas">Chiapas</option>
+                                                    <option value="Chihuahua">Chihuahua</option>
+                                                    <option value="Ciudad de México">Ciudad de México</option>
+                                                    <option value="Coahuila">Coahuila</option>
+                                                    <option value="Colima">Colima</option>
+                                                    <option value="Durango">Durango</option>
+                                                    <option value="Estado de México">Estado de México</option>
+                                                    <option value="Guanajuato">Guanajuato</option>
+                                                    <option value="Guerrero">Guerrero</option>
+                                                    <option value="Hidalgo">Hidalgo</option>
+                                                    <option value="Jalisco">Jalisco</option>
+                                                    <option value="Michoacán">Michoacán</option>
+                                                    <option value="Morelos">Morelos</option>
+                                                    <option value="Nayarit">Nayarit</option>
+                                                    <option value="Nuevo León">Nuevo León</option>
+                                                    <option value="Oaxaca">Oaxaca</option>
+                                                    <option value="Puebla">Puebla</option>
+                                                    <option value="Querétaro">Querétaro</option>
+                                                    <option value="Quintana Roo">Quintana Roo</option>
+                                                    <option value="San Luis Potosí">San Luis Potosí</option>
+                                                    <option value="Sinaloa">Sinaloa</option>
+                                                    <option value="Sonora">Sonora</option>
+                                                    <option value="Tabasco">Tabasco</option>
+                                                    <option value="Tamaulipas">Tamaulipas</option>
+                                                    <option value="Tlaxcala">Tlaxcala</option>
+                                                    <option value="Veracruz">Veracruz</option>
+                                                    <option value="Yucatán">Yucatán</option>
+                                                    <option value="Zacatecas">Zacatecas</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    País
+                                                </label>
+                                                <select
+                                                    name="country"
+                                                    value={formData.country}
+                                                    onChange={handleInputChange}
+                                                    className="w-full h-12 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white transition-all"
+                                                >
+                                                    <option value="México">México</option>
+                                                    <option value="Estados Unidos">Estados Unidos</option>
+                                                    <option value="Canadá">Canadá</option>
+                                                    <option value="Otro">Otro</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                                <Phone className="w-4 h-4 text-amber-600" />
+                                                Teléfono de Contacto
+                                            </label>
+                                            <Input
+                                                type="tel"
+                                                name="phone"
+                                                value={formData.phone}
+                                                onChange={handleInputChange}
+                                                placeholder="(555) 123-4567"
+                                                className="h-12 border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1.5">
+                                                Para coordinar la entrega del pedido
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Tipo de usuario
-                                    </label>
-                                    <select
-                                        name="role"
-                                        value={formData.role}
-                                        onChange={handleInputChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                <div className="flex gap-4 pt-6 border-t border-gray-200">
+                                    <Button
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="flex-1 h-14 text-base font-semibold bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg shadow-amber-500/30 hover:shadow-xl hover:shadow-amber-500/40 transition-all duration-200"
                                     >
-                                        <option value="customer">👤 Cliente</option>
-                                        <option value="admin">👑 Administrador</option>
-                                    </select>
-                                </div>
-
-                                <div className="flex gap-3 pt-4 border-t border-gray-200">
-                                    <Button type="submit" disabled={submitting} className="flex-1">
-                                        {submitting ? 'Guardando...' : modalMode === 'create' ? 'Crear Cliente' : 'Guardar Cambios'}
+                                        {submitting ? (
+                                            <span className="flex items-center gap-2">
+                                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                                Guardando...
+                                            </span>
+                                        ) : (
+                                            modalMode === 'create' ? '✨ Crear Cliente' : '💾 Guardar Cambios'
+                                        )}
                                     </Button>
-                                    <Button type="button" onClick={closeModal} disabled={submitting} className="flex-1 bg-gray-500 hover:bg-gray-600">
+                                    <Button
+                                        type="button"
+                                        onClick={closeModal}
+                                        disabled={submitting}
+                                        className="flex-1 h-14 text-base font-semibold bg-gray-200 hover:bg-gray-300 text-gray-800 transition-all duration-200"
+                                    >
                                         Cancelar
                                     </Button>
                                 </div>

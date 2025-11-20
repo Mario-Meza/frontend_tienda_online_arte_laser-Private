@@ -7,7 +7,7 @@ import { ProfileTab } from "@/components/customer/profile-tab"
 import { FavoritesTab } from "@/components/customer/favorites-tab"
 import { OrdersList } from "@/components/customer/OrderList"
 import {useEffect} from "react";
-import {useRouter} from "next/navigation";
+import { useRouter } from 'next/navigation';
 export default function CustomerProfile() {
     const { user } = useAuth()
     const { isAdmin, isAuthenticated, token } = useAuth()
@@ -23,7 +23,7 @@ export default function CustomerProfile() {
     }
     useEffect(() => {
         if (isAdmin) {
-            router.push("/admin/admin/dashboard"); // o la ruta que prefieras
+            router.push("/admin/admin/dashboard");
         }
     }, [isAdmin, router]);
 
