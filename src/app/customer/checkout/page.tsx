@@ -11,6 +11,15 @@ interface Product {
     _id: string
     shipping_cost?: number
 }
+interface Address {
+    street: string;
+    number?: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    country?: string;
+    references?: string;
+}
 
 export default function CheckoutPage() {
     const { items, total, clearCart } = useCart()
@@ -19,6 +28,23 @@ export default function CheckoutPage() {
     const [error, setError] = useState<string | null>(null)
     const { isAuthenticated, token, user, isAdmin } = useAuth()
     const [products, setProducts] = useState<Product[]>([])
+    const formatAddress = (address: string | Address | undefined | null): string => {
+        if (!address) return "No registrado";
+
+        // Si es string, devolverlo tal cual
+        if (typeof address === 'string') return address;
+
+        // Si es objeto Address, formatearlo bonito
+        const parts = [
+            address.street,
+            address.number ? `#${address.number}` : '',
+            address.city,
+            address.state,
+            address.postal_code
+        ].filter(Boolean); // Elimina valores vacíos
+
+        return parts.join(', ');
+    }
 
     // Redirigir según rol
     useEffect(() => {
@@ -114,15 +140,34 @@ export default function CheckoutPage() {
         setLoading(true)
         setError(null)
 
+        if (!user) {
+            setError("Usuario no autenticado");
+            setLoading(false);
+            return;
+        }
+
+        // 👇 1. FUNCIÓN HELPER: Convertir Objeto a Texto (String)
+        // Esto soluciona el error 422 "Input should be a valid string"
+        const getAddressString = (addr: any): string => {
+            if (!addr) return "Dirección no especificada";
+            if (typeof addr === 'string') return addr;
+
+            // Si es objeto, lo unimos en un solo texto
+            return `${addr.street} ${addr.number ? '#' + addr.number : ''}, ${addr.city}, ${addr.state}, CP ${addr.postal_code}`.trim();
+        };
+
         try {
             const orderData = {
-                customer_id: user?._id,
+                customer_id: user._id,
                 details: items.map((item) => ({
                     product_id: item.product_id,
                     quantity: item.quantity,
                 })),
-                shipping_address: user?.address || "No especificada" // ✅ Enviar dirección
+                // 👇 2. USAR LA FUNCIÓN AQUÍ
+                shipping_address: getAddressString(user.address)
             }
+
+            // console.log("Enviando orden:", orderData);
 
             const orderResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders`, {
                 method: "POST",
@@ -134,11 +179,18 @@ export default function CheckoutPage() {
             })
 
             if (!orderResponse.ok) {
-                throw new Error("Error al crear la orden")
+                const errorData = await orderResponse.json();
+                // Manejo mejorado de errores
+                if (orderResponse.status === 422) {
+                    console.error("Error validación:", errorData);
+                    throw new Error("Error de formato en los datos enviados.");
+                }
+                throw new Error(errorData.detail || "Error al crear la orden");
             }
 
             const order = await orderResponse.json()
 
+            // --- Continuar con el flujo de Stripe ---
             const checkoutResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/stripe/checkout/${order._id}`, {
                 method: "POST",
                 headers: {
@@ -155,6 +207,7 @@ export default function CheckoutPage() {
             clearCart()
             window.location.href = checkoutData.checkout_url
         } catch (err) {
+            console.error(err);
             setError(err instanceof Error ? err.message : "Error desconocido")
         } finally {
             setLoading(false)
@@ -234,10 +287,17 @@ export default function CheckoutPage() {
                                     </label>
                                     <input
                                         type="text"
-                                        value={user?.address || "No registrado"}
+                                        /* 👇 AQUÍ ESTÁ EL CAMBIO CLAVE */
+                                        value={formatAddress(user?.address)}
                                         disabled
                                         className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl text-gray-700 font-medium"
                                     />
+                                    {/* Opcional: Agregar un link para editar si no es correcta */}
+                                    {!user?.address && (
+                                        <Link href="/profile" className="text-sm text-blue-600 hover:underline">
+                                            Agregar dirección
+                                        </Link>
+                                    )}
                                 </div>
                             </div>
                         </div>

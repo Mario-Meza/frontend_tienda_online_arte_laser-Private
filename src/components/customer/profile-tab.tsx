@@ -18,19 +18,22 @@ export function ProfileTab() {
     const [showNewPassword, setShowNewPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [notification, setNotification] = useState<{type: NotificationType, message: string} | null>(null)
+    const addressData = (typeof user?.address === 'object' && user?.address !== null)
+        ? (user.address as any)
+        : {};
 
     const [formData, setFormData] = useState({
         name: user?.name || "",
         last_name: user?.last_name || "",
         email: user?.email || "",
         phone: user?.phone || "",
-        street: user?.address?.street || "",
-        number: user?.address?.number || "",
-        references: user?.address?.references || "",
-        postal_code: user?.address?.postal_code || "",
-        city: user?.address?.city || "",
-        state: user?.address?.state || "",
-        country: user?.address?.country || "México",
+        street: addressData.street || "",
+        number: addressData.number || "",
+        references: addressData.references || "",
+        postal_code: addressData.postal_code || "",
+        city: addressData.city || "",
+        state: addressData.state || "",
+        country: addressData.country || "México",
     })
 
     const [passwordData, setPasswordData] = useState({
@@ -50,18 +53,21 @@ export function ProfileTab() {
 
     useEffect(() => {
         if (user) {
+            const currentAddress = (typeof user.address === 'object' && user.address !== null)
+                ? (user.address as any)
+                : {};
             setFormData({
                 name: user.name || "",
                 last_name: user.last_name || "",
                 email: user.email || "",
                 phone: user.phone || "",
-                street: user?.address?.street || "",
-                number: user?.address?.number || "",
-                references: user?.address?.references || "",
-                postal_code: user?.address?.postal_code || "",
-                city: user?.address?.city || "",
-                state: user?.address?.state || "",
-                country: user?.address?.country || "México",
+                street: currentAddress.street || "",
+                number: currentAddress.number || "",
+                references: currentAddress.references || "",
+                postal_code: currentAddress.postal_code || "",
+                city: currentAddress.city || "",
+                state: currentAddress.state || "",
+                country: currentAddress.country || "México",
             })
         }
     }, [user])
@@ -231,18 +237,21 @@ export function ProfileTab() {
     }
 
     const handleCancel = () => {
+        const currentAddress = (typeof user?.address === 'object' && user?.address !== null)
+            ? (user.address as any)
+            : {};
         setFormData({
             name: user?.name || "",
             last_name: user?.last_name || "",
             email: user?.email || "",
             phone: user?.phone || "",
-            street: user?.address?.street || "",
-            number: user?.address?.number || "",
-            references: user?.address?.references || "",
-            postal_code: user?.address?.postal_code || "",
-            city: user?.address?.city || "",
-            state: user?.address?.state || "",
-            country: user?.address?.country || "México",
+            street: currentAddress.street || "",
+            number: currentAddress.number || "",
+            references: currentAddress.references || "",
+            postal_code: currentAddress.postal_code || "",
+            city: currentAddress.city || "",
+            state: currentAddress.state || "",
+            country: currentAddress.country || "México",
         })
         setIsEditing(false)
     }

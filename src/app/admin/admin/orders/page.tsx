@@ -5,10 +5,21 @@ import { useAuth } from "@/context/auth_context"
 import {
     Search, Package, Truck, CheckCircle, XCircle, Clock, Eye,
     Filter, Download, ChevronLeft, ChevronRight, ArrowUpDown,
-    Calendar, DollarSign, X, User, MapPin, ShoppingBag, AlertCircle
+    Calendar, DollarSign, X, User, MapPin, ShoppingBag, AlertCircle, Phone, Mail, Navigation
 } from "lucide-react"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+
+interface Address {
+    street?: string
+    number?: string
+    references?: string
+    postal_code?: string
+    city?: string
+    state?: string
+    country?: string
+    phone?: string
+}
 
 interface OrderDetail {
     product_id: string
@@ -22,7 +33,7 @@ interface Customer {
     _id: string
     name: string
     email: string
-    address?: string
+    address?: Address
     phone?: string
 }
 
@@ -33,12 +44,12 @@ interface Order {
     customer_name?: string
     customer_email?: string
     customer_phone?: string
-    customer_address?: string
+    customer_address?: Address | string
     status: 'pending' | 'processing' | 'sent' | 'delivered' | 'canceled'
     order_date: string
     total: number
     details: OrderDetail[]
-    shipping_address?: string
+    shipping_address?: Address | string
 }
 
 type NotificationType = 'success' | 'error' | 'info'
@@ -111,12 +122,12 @@ export default function AdminOrdersPage() {
         setTimeout(() => setNotification(null), 5000)
     }
 
+// Función enrichOrderData actualizada
     const enrichOrderData = async (order: any): Promise<Order> => {
         try {
-            // Normalizar ID de la orden
             const orderId = order._id || order.id
 
-            // Obtener datos del customer desde endpoint público
+            // Obtener datos del customer
             let customerData: Customer | null = null
             try {
                 const customerRes = await fetch(`${API_BASE_URL}/api/v1/customers/public/${order.customer_id}`)
@@ -127,18 +138,23 @@ export default function AdminOrdersPage() {
                 console.warn('No se pudo obtener info del customer:', order.customer_id)
             }
 
-            // Si no hay datos públicos, intentar obtener del token (si es el mismo user)
             if (!customerData && user && user._id === order.customer_id) {
+                // 👇 FIX START: Check if address is a string and convert it to an object
+                const userAddress: Address | undefined = typeof user.address === 'string'
+                    ? { street: user.address } // Map the string to the 'street' field
+                    : user.address as Address | undefined;
+                // 👆 FIX END
+
                 customerData = {
                     _id: user._id,
                     name: user.name,
                     email: user.email,
-                    address: user.address,
+                    address: userAddress, // Now this is guaranteed to be an Address object or undefined
                     phone: user.phone
                 }
             }
 
-            // Enriquecer detalles con nombres de productos
+            // Enriquecer detalles de productos
             const enrichedDetails = await Promise.all(
                 order.details.map(async (detail: OrderDetail) => {
                     try {
@@ -158,18 +174,21 @@ export default function AdminOrdersPage() {
                 })
             )
 
+            // ✅ Manejar dirección: priorizar address del customer sobre shipping_address
+            const addressData = customerData?.address || order.shipping_address
+
             return {
                 _id: orderId,
                 customer_id: order.customer_id,
                 customer_name: customerData?.name || `Cliente ${order.customer_id.slice(-6)}`,
                 customer_email: customerData?.email || "Email no disponible",
                 customer_phone: customerData?.phone,
-                customer_address: customerData?.address || order.shipping_address,
+                customer_address: addressData,  // ✅ Ahora es el objeto completo de Address
                 status: order.status,
                 order_date: order.order_date,
                 total: order.total,
                 details: enrichedDetails,
-                shipping_address: customerData?.address || order.shipping_address
+                shipping_address: addressData
             }
         } catch (err) {
             console.error("Error enriching order:", err)
@@ -494,6 +513,24 @@ export default function AdminOrdersPage() {
 
     const stats = getStatusStats()
 
+    // ✅ Función helper para formatear dirección
+    const formatAddress = (address: Address | string | undefined): string => {
+        if (!address) return 'No disponible'
+
+        if (typeof address === 'string') {
+            return address
+        }
+
+        return [
+            address.street && address.number
+                ? `${address.street} #${address.number}`
+                : address.street,
+            address.references,
+            [address.city, address.state, address.postal_code].filter(Boolean).join(', '),
+            address.country
+        ].filter(Boolean).join(', ')
+    }
+
     return (
         <div className="container py-8 max-w-7xl mx-auto px-4">
             <div className="mb-8">
@@ -689,7 +726,7 @@ export default function AdminOrdersPage() {
                             </tr>
                         ) : (
                             currentOrders.map((order) => {
-                                const statusInfo = statusConfig[order.status as keyof typeof statusConfig]
+                                const statusInfo = statusConfig[order.status]
                                 const StatusIcon = statusInfo?.icon || Clock
 
                                 return (
@@ -720,10 +757,10 @@ export default function AdminOrdersPage() {
                                             ${order.total.toFixed(2)}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${statusInfo?.color || 'bg-gray-100 text-gray-800'}`}>
-                                                <StatusIcon className="w-3 h-3" />
-                                                {statusInfo?.label || order.status}
-                                            </span>
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${statusInfo?.color || 'bg-gray-100 text-gray-800'}`}>
+                                    <StatusIcon className="w-3 h-3" />
+                                    {statusInfo?.label || order.status}
+                                </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-2">
@@ -743,7 +780,7 @@ export default function AdminOrdersPage() {
                         </tbody>
                     </table>
                 </div>
-
+                {/* Paginación */}
                 {totalPages > 1 && (
                     <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -789,9 +826,12 @@ export default function AdminOrdersPage() {
                 )}
             </div>
 
+
+            {/* Modal de detalles */}
             {showDetailModal && selectedOrder && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        {/* Header del modal */}
                         <div className="p-6 border-b border-gray-200">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -816,6 +856,7 @@ export default function AdminOrdersPage() {
                                 </button>
                             </div>
 
+                            {/* Tabs */}
                             <div className="flex gap-4 mt-6 border-b border-gray-200">
                                 <button
                                     onClick={() => setActiveTab('details')}
@@ -853,7 +894,9 @@ export default function AdminOrdersPage() {
                             </div>
                         </div>
 
+                        {/* Contenido del modal */}
                         <div className="flex-1 overflow-y-auto p-6">
+                            {/* Tab: Detalles */}
                             {activeTab === 'details' && (
                                 <div className="space-y-6">
                                     <div>
@@ -861,24 +904,26 @@ export default function AdminOrdersPage() {
                                             Estado de la orden
                                         </label>
                                         <div className="flex flex-wrap items-center gap-3">
-                                            <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium ${statusConfig[selectedOrder.status as keyof typeof statusConfig]?.color}`}>
-                                                {React.createElement(statusConfig[selectedOrder.status as keyof typeof statusConfig]?.icon || Clock, { className: "w-4 h-4" })}
-                                                {statusConfig[selectedOrder.status as keyof typeof statusConfig]?.label || selectedOrder.status}
+                                            <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium ${statusConfig[selectedOrder.status]?.color}`}>
+                                                {React.createElement(statusConfig[selectedOrder.status]?.icon || Clock, { className: "w-4 h-4" })}
+                                                {statusConfig[selectedOrder.status]?.label || selectedOrder.status}
                                             </span>
 
-                                            {statusConfig[selectedOrder.status as keyof typeof statusConfig]?.nextStatus && (
+                                            {statusConfig[selectedOrder.status]?.nextStatus && (
                                                 <button
                                                     onClick={() => updateOrderStatus(
                                                         selectedOrder._id,
-                                                        statusConfig[selectedOrder.status as keyof typeof statusConfig].nextStatus!
+                                                        statusConfig[selectedOrder.status].nextStatus!
                                                     )}
                                                     disabled={updatingStatus}
                                                     className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                                                 >
-                                                    {updatingStatus ? 'Actualizando...' : `Marcar como ${statusConfig[statusConfig[selectedOrder.status as keyof typeof statusConfig].nextStatus! as keyof typeof statusConfig]?.label}`}
+                                                    {updatingStatus
+                                                        ? 'Actualizando...'
+                                                        : `Marcar como ${statusConfig[statusConfig[selectedOrder.status].nextStatus! as keyof typeof statusConfig]?.label}`
+                                                    }
                                                 </button>
                                             )}
-
 
                                             {selectedOrder.status !== 'canceled' && selectedOrder.status !== 'delivered' && (
                                                 <button
@@ -919,54 +964,205 @@ export default function AdminOrdersPage() {
                                 </div>
                             )}
 
+                            {/* Tab: Cliente - ✅ CORREGIDO */}
                             {activeTab === 'customer' && (
                                 <div className="space-y-6">
+                                    {/* Información principal */}
                                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl">
                                         <div className="flex items-start gap-4">
-                                            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                                            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
                                                 {selectedOrder.customer_name?.charAt(0) || 'U'}
                                             </div>
-                                            <div className="flex-1">
+                                            <div className="flex-1 min-w-0">
                                                 <h3 className="text-xl font-bold text-gray-900 mb-1">
                                                     {selectedOrder.customer_name}
                                                 </h3>
-                                                <p className="text-gray-600 mb-4">{selectedOrder.customer_email}</p>
-
-                                                {selectedOrder.shipping_address && (
-                                                    <div className="bg-white p-4 rounded-lg">
-                                                        <div className="flex items-start gap-2">
-                                                            <MapPin className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
-                                                            <div>
-                                                                <p className="text-sm font-medium text-gray-700 mb-1">
-                                                                    Dirección de envío
-                                                                </p>
-                                                                <p className="text-gray-900">
-                                                                    {selectedOrder.shipping_address}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                                <p className="text-gray-600 mb-1">{selectedOrder.customer_email}</p>
+                                                {selectedOrder.customer_phone && (
+                                                    <p className="text-gray-600 flex items-center gap-2">
+                                                        <Phone className="w-4 h-4" />
+                                                        {selectedOrder.customer_phone}
+                                                    </p>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
 
+                                    {/* ID del cliente */}
                                     <div className="bg-gray-50 p-4 rounded-lg">
-                                        <h4 className="font-semibold mb-3">Información de contacto</h4>
-                                        <div className="space-y-2 text-sm">
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-600">ID Cliente:</span>
-                                                <span className="font-mono font-medium">#{selectedOrder.customer_id.slice(-8)}</span>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-gray-600">ID del Cliente</span>
+                                            <span className="font-mono font-semibold text-gray-900">
+                                    #{selectedOrder.customer_id.slice(-8).toUpperCase()}
+                                </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Dirección de envío */}
+                                    {selectedOrder.customer_address && (
+                                        <div className="bg-white border border-gray-200 rounded-xl p-6">
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <MapPin className="w-5 h-5 text-blue-600" />
+                                                <h4 className="text-lg font-semibold text-gray-900">
+                                                    Dirección de Envío
+                                                </h4>
                                             </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-gray-600">Email:</span>
-                                                <span className="font-medium">{selectedOrder.customer_email}</span>
+
+                                            {typeof selectedOrder.customer_address === 'string' ? (
+                                                <div className="bg-gray-50 p-4 rounded-lg">
+                                                    <p className="text-gray-900">{selectedOrder.customer_address}</p>
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {selectedOrder.customer_address.street && (
+                                                        <div className="col-span-2">
+                                                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                                Calle
+                                                            </label>
+                                                            <div className="bg-gray-50 p-3 rounded-lg">
+                                                                <p className="text-gray-900 font-medium">
+                                                                    {selectedOrder.customer_address.street}
+                                                                    {selectedOrder.customer_address.number &&
+                                                                        ` #${selectedOrder.customer_address.number}`
+                                                                    }
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {selectedOrder.customer_address.references && (
+                                                        <div className="col-span-2">
+                                                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                                <Navigation className="w-3 h-3 inline mr-1" />
+                                                                Referencias
+                                                            </label>
+                                                            <div className="bg-gray-50 p-3 rounded-lg">
+                                                                <p className="text-gray-700 text-sm">
+                                                                    {selectedOrder.customer_address.references}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Ciudad</label>
+                                                        <div className="bg-gray-50 p-3 rounded-lg">
+                                                            <p className="text-gray-900 font-medium">
+                                                                {selectedOrder.customer_address.city || 'No especificado'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
+                                                        <div className="bg-gray-50 p-3 rounded-lg">
+                                                            <p className="text-gray-900 font-medium">
+                                                                {selectedOrder.customer_address.state || 'No especificado'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-500 mb-1">Código Postal</label>
+                                                        <div className="bg-gray-50 p-3 rounded-lg">
+                                                            <p className="text-gray-900 font-medium">
+                                                                {selectedOrder.customer_address.postal_code || 'No especificado'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-xs font-medium text-gray-500 mb-1">País</label>
+                                                        <div className="bg-gray-50 p-3 rounded-lg">
+                                                            <p className="text-gray-900 font-medium">
+                                                                {selectedOrder.customer_address.country || 'México'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {selectedOrder.customer_address.phone && (
+                                                        <div className="col-span-2">
+                                                            <label className="block text-xs font-medium text-gray-500 mb-1">
+                                                                <Phone className="w-3 h-3 inline mr-1" />
+                                                                Teléfono de contacto
+                                                            </label>
+                                                            <div className="bg-gray-50 p-3 rounded-lg">
+                                                                <p className="text-gray-900 font-medium">
+                                                                    {selectedOrder.customer_address.phone}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Dirección completa */}
+                                                    <div className="col-span-2 mt-4 pt-4 border-t border-gray-200">
+                                                        <label className="block text-xs font-medium text-gray-500 mb-2">
+                                                            Dirección completa
+                                                        </label>
+                                                        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                                                            <p className="text-gray-900 leading-relaxed">
+                                                                {formatAddress(selectedOrder.customer_address)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Estadísticas */}
+                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                        <h4 className="font-semibold mb-3 flex items-center gap-2">
+                                            <ShoppingBag className="w-4 h-4 text-gray-600" />
+                                            Estadísticas del cliente
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="text-center">
+                                                <p className="text-2xl font-bold text-blue-600">
+                                                    {orders.filter(o => o.customer_id === selectedOrder.customer_id).length}
+                                                </p>
+                                                <p className="text-xs text-gray-600 mt-1">Órdenes totales</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-2xl font-bold text-green-600">
+                                                    ${orders
+                                                    .filter(o => o.customer_id === selectedOrder.customer_id)
+                                                    .reduce((sum, o) => sum + o.total, 0)
+                                                    .toFixed(2)}
+                                                </p>
+                                                <p className="text-xs text-gray-600 mt-1">Total gastado</p>
                                             </div>
                                         </div>
+                                    </div>
+
+                                    {/* Botones de acción */}
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => {
+                                                const address = formatAddress(selectedOrder.customer_address)
+                                                navigator.clipboard.writeText(address)
+                                                showNotification('success', '📋 Dirección copiada al portapapeles')
+                                            }}
+                                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <MapPin className="w-4 h-4" />
+                                            Copiar dirección
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                window.location.href = `mailto:${selectedOrder.customer_email}`
+                                            }}
+                                            className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <Mail className="w-4 h-4" />
+                                            Contactar
+                                        </button>
                                     </div>
                                 </div>
                             )}
 
+                            {/* Tab: Productos */}
                             {activeTab === 'products' && (
                                 <div className="space-y-4">
                                     <h3 className="font-semibold text-lg">Productos en la orden</h3>
@@ -1005,6 +1201,7 @@ export default function AdminOrdersPage() {
                             )}
                         </div>
 
+                        {/* Footer del modal */}
                         <div className="border-t p-6">
                             <button
                                 onClick={closeDetailModal}
@@ -1017,6 +1214,7 @@ export default function AdminOrdersPage() {
                 </div>
             )}
 
+            {/* Notificación */}
             {notification && (
                 <div className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-xl shadow-2xl ${
                     notification.type === 'success' ? 'bg-green-500' :

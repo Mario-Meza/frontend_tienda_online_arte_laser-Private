@@ -5,6 +5,18 @@ import { useAuth } from "@/context/auth_context"
 import { Package, Truck, CheckCircle, XCircle, Clock, Eye, X, AlertCircle, RefreshCw } from "lucide-react"
 import Link from "next/link"
 
+
+
+interface Address {
+    street: string;
+    number?: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    country?: string;
+    references?: string;
+}
+
 interface OrderDetail {
     product_id: string
     product_name?: string
@@ -37,7 +49,7 @@ interface Customer {
     _id: string
     name: string
     email: string
-    address: string
+    address: Address | string; // 👈 ACTUALIZA ESTO: Puede ser objeto o string
     phone: string
 }
 
@@ -111,6 +123,17 @@ export function OrdersList({ showHeader = true, maxOrders, showCanceled = false 
     } | null>(null)
 
     const { user, token } = useAuth()
+
+    // 👇 AGREGA ESTA FUNCIÓN AQUÍ
+    const formatAddress = (address: Address | string | undefined | null): string => {
+        if (!address) return "Dirección no disponible";
+
+        // Si es string (datos viejos), devolverlo tal cual
+        if (typeof address === 'string') return address;
+
+        // Si es objeto, formatearlo
+        return `${address.street} ${address.number ? '#' + address.number : ''}, ${address.city}, ${address.state}, CP ${address.postal_code}`;
+    }
 
     const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
         setNotification({ type, message })
@@ -541,13 +564,17 @@ export function OrdersList({ showHeader = true, maxOrders, showCanceled = false 
                                 </p>
                             </div>
 
+                            {/* Busca esto alrededor de la línea 430-435 */}
                             {customerData?.address && (
                                 <div className="bg-gray-50 p-4 rounded-lg">
                                     <h3 className="font-semibold mb-2 flex items-center gap-2">
                                         <Truck className="w-5 h-5 text-gray-600" />
                                         Dirección de Envío
                                     </h3>
-                                    <p className="text-gray-700">{customerData.address}</p>
+                                    {/* 👇 AQUÍ ESTÁ EL FIX 👇 */}
+                                    <p className="text-gray-700">
+                                        {formatAddress(customerData.address)}
+                                    </p>
                                     {customerData.phone && (
                                         <p className="text-sm text-gray-600 mt-1">
                                             Tel: {customerData.phone}
