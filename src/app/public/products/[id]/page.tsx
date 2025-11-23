@@ -92,44 +92,66 @@ export default function ProductDetailPage() {
     useEffect(() => {
         const fetchRatings = async () => {
             try {
+                // ✅ ENDPOINT CORRECTO
                 const response = await fetch(
                     `${process.env.NEXT_PUBLIC_API_URL}/api/v1/rating?product_id=${params.id}`
                 )
-                if (response.ok) {
-                    const data = await response.json()
-                    setRatings(data)
 
-                    // Obtener nombres de los usuarios que dejaron reseña
-                    const ratingsWithNames = await Promise.all(
-                        data.map(async (r: Rating) => {
-                            try {
-                                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/public/${r.customer_id}`)
-                                if (res.ok) {
-                                    const customer: Customer = await res.json()
-                                    return { ...r, username: customer.name } // agregamos el nombre al rating
-                                }
-                            } catch (error) {
-                                console.error("Error al obtener nombre de cliente:", error)
-                            }
-                            return r
-                        })
-                    )
-
-                    setRatings(ratingsWithNames)
-
-
-
-                    if (data.length > 0) {
-                        const avg = data.reduce((sum: number, r: Rating) => sum + r.score, 0) / data.length
-                        setAverageRating(avg)
-                    }
+                if (!response.ok) {
+                    console.error("Error al cargar ratings:", response.status)
+                    setRatings([])
+                    setAverageRating(0)
+                    return
                 }
+
+                const data = await response.json()
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    setRatings([])
+                    setAverageRating(0)
+                    return
+                }
+
+                // Obtener nombres de los usuarios que dejaron reseña
+                const ratingsWithNames = await Promise.all(
+                    data.map(async (r: Rating) => {
+                        try {
+                            const res = await fetch(
+                                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/public/${r.customer_id}`
+                            )
+
+                            if (res.ok) {
+                                const customer: Customer = await res.json()
+                                return { ...r, username: customer.name }
+                            } else {
+                                console.warn(`No se pudo obtener info del cliente ${r.customer_id}`)
+                                return { ...r, username: 'Usuario Anónimo' }
+                            }
+                        } catch (error) {
+                            console.error(`Error al obtener nombre de cliente ${r.customer_id}:`, error)
+                            return { ...r, username: 'Usuario Anónimo' }
+                        }
+                    })
+                )
+
+                setRatings(ratingsWithNames)
+
+                // Calcular promedio
+                if (ratingsWithNames.length > 0) {
+                    const avg = ratingsWithNames.reduce((sum: number, r: Rating) => sum + r.score, 0) / ratingsWithNames.length
+                    setAverageRating(avg)
+                }
+
             } catch (err) {
                 console.error("Error al cargar ratings:", err)
+                setRatings([])
+                setAverageRating(0)
             }
         }
+
         fetchRatings()
     }, [params.id])
+
 
     // Verificar si es favorito
     useEffect(() => {
@@ -265,13 +287,35 @@ export default function ProductDetailPage() {
 
                 // Recargar ratings
                 const ratingsResponse = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/rating?product_id=${params.id}`
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/rating?product_id=${params.id}` // ✅ CORRECTO
                 )
+
                 if (ratingsResponse.ok) {
                     const data = await ratingsResponse.json()
-                    setRatings(data)
-                    if (data.length > 0) {
-                        const avg = data.reduce((sum: number, r: Rating) => sum + r.score, 0) / data.length
+
+                    if (Array.isArray(data) && data.length > 0) {
+                        // Obtener nombres actualizados
+                        const ratingsWithNames = await Promise.all(
+                            data.map(async (r: Rating) => {
+                                try {
+                                    const res = await fetch(
+                                        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/public/${r.customer_id}`
+                                    )
+
+                                    if (res.ok) {
+                                        const customer: Customer = await res.json()
+                                        return { ...r, username: customer.name }
+                                    }
+                                } catch (error) {
+                                    console.error("Error al obtener cliente:", error)
+                                }
+                                return { ...r, username: 'Usuario Anónimo' }
+                            })
+                        )
+
+                        setRatings(ratingsWithNames)
+
+                        const avg = ratingsWithNames.reduce((sum: number, r: Rating) => sum + r.score, 0) / ratingsWithNames.length
                         setAverageRating(avg)
                     }
                 }
