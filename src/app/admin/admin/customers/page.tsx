@@ -317,10 +317,40 @@ export default function AdminCustomersPage() {
             showNotification('error', err instanceof Error ? err.message : 'Error al crear cliente')
         }
     }
+    const adminResetPassword = async (customerId: string, newPassword: string) => {
+        try {
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/${customerId}/admin/reset-password`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        // Solo necesitamos enviar el campo password
+                        password: newPassword
+                    })
+                }
+            )
 
-// 5. Actualiza updateCustomer de la misma forma
+            if (!response.ok) {
+                const errorData = await response.json()
+                throw new Error(errorData.detail?.message || errorData.detail || "Error al restablecer contraseña")
+            }
+            // Retorna un valor para indicar éxito
+            return true;
+        } catch (err) {
+            console.error("Error al restablecer la contraseña (Admin):", err)
+            throw err // Re-lanzar para que updateCustomer maneje la notificación de error
+        }
+    }
+
+    // 5. Actualiza updateCustomer de la misma forma
     const updateCustomer = async () => {
         if (!selectedCustomer) return
+
+        let passwordChanged = false; // Bandera para rastrear si el cambio de contraseña fue exitoso
 
         try {
             // Construye el objeto Address solo si hay datos
@@ -338,37 +368,51 @@ export default function AdminCustomersPage() {
                 last_name: formData.last_name,
                 email: formData.email,
                 phone: formData.phone || undefined,
-                address: addressData // ✅ Solo envía el objeto Address, no campos duplicados
+                address: addressData
             }
 
-            if (formData.password) {
-                body.password = formData.password
-            }
+            // ⚠️ La actualización de contraseña se maneja por separado
+            const hasGeneralUpdates = Object.keys(body).some(key => body[key] !== selectedCustomer[key as keyof Customer] && key !== 'address') || addressData;
 
-            const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/${selectedCustomer._id}`,
-                {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify(body)
+
+            // Solo realizar la llamada PUT si hay campos generales que actualizar
+            if (hasGeneralUpdates) {
+                const response = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/${selectedCustomer._id}`,
+                    {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${token}`
+                        },
+                        // Asegúrate de NO enviar el campo `password` aquí
+                        body: JSON.stringify(body)
+                    }
+                )
+
+                if (!response.ok) {
+                    const errorData = await response.json()
+                    throw new Error(errorData.detail?.message || errorData.detail || "Error al actualizar cliente")
                 }
-            )
-
-            if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.detail?.message || errorData.detail || "Error al actualizar cliente")
             }
 
+
+            // 🔑 Llamada CONDICIONAL para CAMBIO DE CONTRASEÑA usando el endpoint de ADMIN
+            if (formData.password) {
+                // Llama a la nueva función
+                await adminResetPassword(selectedCustomer._id, formData.password);
+                passwordChanged = true;
+            }
+
+            // Actualizar Role si es diferente
             if (formData.role !== selectedCustomer.role) {
                 await updateCustomerRole(selectedCustomer._id, formData.role)
             }
 
-            showNotification('success', '✅ Cliente actualizado correctamente')
+            showNotification('success', '✅ Cliente actualizado correctamente' + (passwordChanged ? ' (Incluyendo contraseña)' : ''))
             closeModal()
             fetchCustomers()
+
         } catch (err) {
             console.error("Error:", err)
             showNotification('error', err instanceof Error ? err.message : 'Error al actualizar cliente')
