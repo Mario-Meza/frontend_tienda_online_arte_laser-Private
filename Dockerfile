@@ -1,52 +1,54 @@
 # 1. ETAPA DE CONSTRUCCIÓN (BUILDER)
-# Usa la imagen de Node.js que coincide con la versión usada en desarrollo
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
-# Configura variables de entorno para el proceso de construcción
-ENV NODE_ENV=production
+# Instala dependencias del sistema necesarias para compilar módulos nativos
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
-# Establece el directorio de trabajo
 WORKDIR /app
 
-# Copia los archivos de configuración de dependencias primero
-# Esto permite que Docker cachee el paso de instalación si solo cambia el código.
-COPY package.json yarn.lock ./
+# Copia archivos de dependencias
+COPY package.json package-lock.json ./
 
-# Instala las dependencias de Node.js
-RUN npm install --frozen-lockfile
+# Instala dependencias
+RUN npm ci
 
-# Copia el resto del código del frontend
+# Copia el código fuente
 COPY . .
 
-# Comando de construcción de Next.js
-# Esto genera la carpeta 'out' o '.next' dependiendo de cómo sirvas la app.
-# Si usas el export estático: yarn build && yarn export
-# Si usas el servidor de Next: yarn build
-RUN yarn build
+# Configura las variables de entorno para el build
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build con output standalone
+RUN npm run build
 
 
-# 2. ETAPA DE PRODUCCIÓN (RUNNER)
-# Usa una imagen base pequeña y segura para servir los archivos
-# Node.js no es estrictamente necesario si solo sirves archivos estáticos,
-# pero es más fácil para Next.js si no usas Static Export.
-# Usaremos node-alpine para servir la app Next.js o Nginx si fuera Static Export.
-FROM node:20-alpine AS runner
+# 2. ETAPA DE PRODUCCIÓN (RUNNER) - Súper ligera
+FROM node:20-slim AS runner
 
-# Establece el directorio de trabajo
 WORKDIR /app
 
-# 🚨 Configuración crítica para Next.js 🚨
-# Copia solo los archivos esenciales para la ejecución
-COPY --from=builder /app/package.json /app/package.json
-COPY --from=builder /app/node_modules /app/node_modules
-COPY --from=builder /app/.next /app/.next
-COPY --from=builder /app/public /app/public
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Establece el puerto de Next.js (por defecto: 3000)
+# Crea usuario no-root
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copia solo lo necesario del build standalone
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+USER nextjs
+
 ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-# Exponer el puerto
 EXPOSE ${PORT}
 
-# Comando de inicio: Inicia la aplicación en modo producción
-CMD ["yarn", "start"]
+# Ejecuta el servidor standalone
+CMD ["node", "server.js"]

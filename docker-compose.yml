@@ -1,24 +1,39 @@
-# docker-compose.yml (Añadir servicio frontend)
+# docker-compose.yml
 
 services:
   # ... servicio mongo ...
 
   # ... servicio api ...
 
-  # 🚨 NUEVO SERVICIO: FRONTEND 🚨
+  # 🚨 SERVICIO FRONTEND 🚨
   frontend:
     build:
-      context: . # Asume que el Dockerfile está en la raíz de tu proyecto
-      dockerfile: Dockerfile.frontend # 👈 Nombra el archivo Dockerfile para el frontend
+      context: .
+      dockerfile: Dockerfile
     container_name: nextjs_frontend
-    # En local, el frontend apunta a localhost:3000
     ports:
       - "3000:3000"
-    # Asegúrate de que pueda hablar con la API (si está en el mismo archivo)
     environment:
+      # Variables de entorno para Next.js
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: "0.0.0.0"
       # URL de la API que consumirá el frontend
+      # 🔥 IMPORTANTE: Si la API está en Docker, usa el nombre del servicio
+      # Si la API está fuera de Docker (host), usa host.docker.internal
       NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    # Si necesitas comunicación con otros servicios en Docker
+    # depends_on:
+    #   - api
     restart: always
+    # Si la API está en el mismo docker-compose, puedes usar networking
+    # networks:
+    #   - app-network
 
 volumes:
   mongo_data:
+
+# Si usas networking personalizado:
+# networks:
+#   app-network:
+#     driver: bridge

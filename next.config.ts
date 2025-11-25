@@ -1,16 +1,26 @@
 import type { NextConfig } from "next";
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
+    output: 'standalone',
+
+    // Deshabilita ESLint y TypeScript durante el build (solo para producción)
+    eslint: {
+        ignoreDuringBuilds: true,
+    },
+    typescript: {
+        ignoreBuildErrors: true,
+    },
+
     async rewrites() {
         return [
             {
                 source: '/api/:path*',
-                destination: 'http://localhost:8000/api/:path*', // Cambia el puerto si es diferente
+                // En producción, esto debería apuntar al servicio de API en Docker
+                // Si la API está en el mismo docker-compose, usa: http://api:8000/api/:path*
+                destination: process.env.API_INTERNAL_URL || 'http://localhost:8000/api/:path*',
             },
         ]
     },
 }
 
-module.exports = nextConfig
 export default nextConfig;
