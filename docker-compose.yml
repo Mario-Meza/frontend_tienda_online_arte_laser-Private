@@ -10,6 +10,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
     container_name: nextjs_frontend
     ports:
       - "3000:3000"
@@ -21,7 +23,7 @@ services:
       # URL de la API que consumirá el frontend
       # 🔥 IMPORTANTE: Si la API está en Docker, usa el nombre del servicio
       # Si la API está fuera de Docker (host), usa host.docker.internal
-      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+      NEXT_PUBLIC_API_URL: http://localhost:8000
     # Si necesitas comunicación con otros servicios en Docker
     # depends_on:
     #   - api

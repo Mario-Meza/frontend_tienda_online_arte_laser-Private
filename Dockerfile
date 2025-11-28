@@ -20,6 +20,8 @@ RUN npm ci
 COPY . .
 
 # Configura las variables de entorno para el build
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build con output standalone
