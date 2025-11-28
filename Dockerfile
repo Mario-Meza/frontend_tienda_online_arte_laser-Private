@@ -17,7 +17,10 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # Copia el código fuente
-COPY . .
+# CON ESTAS TRES LÍNEAS EXPLÍCITAS:
+COPY src ./src
+COPY public ./public
+COPY tsconfig.json ./tsconfig.json
 
 # Configura las variables de entorno para el build
 ARG NEXT_PUBLIC_API_URL
