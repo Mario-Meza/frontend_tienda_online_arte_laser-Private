@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/context/auth_context"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
+import { API_URL } from "@/lib/api-config"
+
 
 interface OrderDetail {
     product_id: string
@@ -40,7 +42,7 @@ export default function OrderDetailPage() {
 
         const fetchOrder = async () => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders/${orderId}`, {
+                const response = await fetch(`${API_URL}/api/v1/orders/${orderId}`, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },

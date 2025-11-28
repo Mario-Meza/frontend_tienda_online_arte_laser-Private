@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/context/auth_context"
 import { CheckCircle, Package, Truck, CreditCard, Calendar, Home } from "lucide-react"
+import { API_URL } from "@/lib/api-config"
 
 interface OrderDetails {
     _id: string
@@ -39,7 +40,7 @@ export default function PaymentSuccessPage() {
 
             try {
                 // Obtener detalles de la sesión de Stripe desde tu backend
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/stripe/session/${sessionId}`, {
+                const response = await fetch(`${API_URL}/api/v1/stripe/session/${sessionId}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }

@@ -10,7 +10,6 @@ export default function PaymentCancelPage() {
     const orderId = searchParams.get("order_id")
     const { isAuthenticated, user, isAdmin } = useAuth()
     const router = useRouter()
-
     // ✅ Redirigir si ya está autenticado
     useEffect(() => {
         if (isAuthenticated && user) {

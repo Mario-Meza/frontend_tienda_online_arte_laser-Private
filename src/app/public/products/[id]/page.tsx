@@ -7,6 +7,7 @@ import { useAuth } from "@/context/auth_context"
 import { Button } from "@/components/ui/Button"
 import { StarRating } from "@/components/ui/Stars"
 import { Heart, Star, MessageSquare } from "lucide-react"
+import { API_URL } from "@/lib/api-config"
 
 interface Product {
     _id: string
@@ -73,7 +74,7 @@ export default function ProductDetailPage() {
         const fetchProduct = async () => {
             try {
                 const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/${params.id}`
+                    `${API_URL}/api/v1/products/${params.id}`
                 )
                 if (!response.ok) throw new Error("Producto no encontrado")
                 const data = await response.json()
@@ -94,7 +95,7 @@ export default function ProductDetailPage() {
             try {
                 // ✅ ENDPOINT CORRECTO
                 const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/rating?product_id=${params.id}`
+                    `${API_URL}/api/v1/rating?product_id=${params.id}`
                 )
 
                 if (!response.ok) {
@@ -117,7 +118,7 @@ export default function ProductDetailPage() {
                     data.map(async (r: Rating) => {
                         try {
                             const res = await fetch(
-                                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/public/${r.customer_id}`
+                                `${API_URL}/api/v1/customers/public/${r.customer_id}`
                             )
 
                             if (res.ok) {
@@ -160,7 +161,7 @@ export default function ProductDetailPage() {
         const checkFavorite = async () => {
             try {
                 const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/favorites`,
+                    `${API_URL}/api/v1/favorites`,
                     { headers: { "Authorization": `Bearer ${token}` } }
                 )
                 if (response.ok) {
@@ -184,7 +185,7 @@ export default function ProductDetailPage() {
         try {
             if (isFavorite) {
                 const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/favorites/product/${params.id}`,
+                    `${API_URL}/api/v1/favorites/product/${params.id}`,
                     {
                         method: "DELETE",
                         headers: { "Authorization": `Bearer ${token}` }
@@ -196,7 +197,7 @@ export default function ProductDetailPage() {
                 }
             } else {
                 const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/favorites`,
+                    `${API_URL}/api/v1/favorites`,
                     {
                         method: "POST",
                         headers: {
@@ -260,7 +261,7 @@ export default function ProductDetailPage() {
 
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/rating`,
+                `${API_URL}/api/v1/rating`,
                 {
                     method: "POST",
                     headers: {
@@ -287,7 +288,7 @@ export default function ProductDetailPage() {
 
                 // Recargar ratings
                 const ratingsResponse = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/rating?product_id=${params.id}` // ✅ CORRECTO
+                    `${API_URL}/api/v1/rating?product_id=${params.id}` // ✅ CORRECTO
                 )
 
                 if (ratingsResponse.ok) {
@@ -299,7 +300,7 @@ export default function ProductDetailPage() {
                             data.map(async (r: Rating) => {
                                 try {
                                     const res = await fetch(
-                                        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/public/${r.customer_id}`
+                                        `${API_URL}/api/v1/customers/public/${r.customer_id}`
                                     )
 
                                     if (res.ok) {

@@ -5,6 +5,7 @@ import { useCart } from "@/context/cart-context"
 import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/Button"
+import { API_URL } from "@/lib/api-config"
 
 interface Product {
     _id: string
@@ -38,7 +39,7 @@ export default function HomePage() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products`)
+                const response = await fetch(`${API_URL}/api/v1/products`)
                 if (response.ok) {
                     const data = await response.json()
                     setProducts(data)

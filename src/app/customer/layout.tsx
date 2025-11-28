@@ -1,7 +1,6 @@
 "use client"
 
 import { ProtectedRoute } from "@/components/shared/ProtectedRoute"
-import Navbar from "@/components/layout/Navbar"
 
 export default function CustomerLayout(
     {children,}:

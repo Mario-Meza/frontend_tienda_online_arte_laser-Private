@@ -4,6 +4,7 @@ import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Button, LinkButton } from "@/components/ui/Button"
+import { API_URL } from "@/lib/api-config"
 
 export default function ProfilePage() {
     const router = useRouter()
@@ -39,7 +40,7 @@ export default function ProfilePage() {
 
     const handleSave = async () => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/${user?._id}`, {
+            const response = await fetch(`${API_URL}/api/v1/customers/${user?._id}`, {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",

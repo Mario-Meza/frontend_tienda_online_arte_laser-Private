@@ -9,6 +9,7 @@ import { StarRating } from "@/components/ui/Stars"
 import { Heart } from 'lucide-react'
 import { HeroSlider } from "@/components/ui/hero-slider"
 import { Footer } from "@/components/ui/footer"
+import { API_URL } from "@/lib/api-config"
 
 interface Product {
     _id: string
@@ -68,7 +69,7 @@ export default function ProductsPage() {
     useEffect(() => {
         const fetchRatings = async () => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/rating`)
+                const response = await fetch(`${API_URL}/api/v1/rating`)
 
                 if (!response.ok) {
                     throw new Error(`Error ${response.status}: ${response.statusText}`)
@@ -104,7 +105,7 @@ export default function ProductsPage() {
         const fetchFavorites = async () => {
             try {
                 const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/favorites`,
+                    `${API_URL}/api/v1/favorites`,
                     {
                         headers: {
                             "Authorization": `Bearer ${token}`
@@ -137,7 +138,7 @@ export default function ProductsPage() {
         const fetchProducts = async () => {
             try {
                 const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/all`,
+                    `${API_URL}/api/v1/products/all`,
                     { signal: controller.signal }
                 )
 
@@ -182,7 +183,7 @@ export default function ProductsPage() {
             if (isFavorite) {
                 // ELIMINAR favorito
                 const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/favorites/product/${productId}`,
+                    `${API_URL}/api/v1/favorites/product/${productId}`,
                     {
                         method: "DELETE",
                         headers: {
@@ -202,7 +203,7 @@ export default function ProductsPage() {
             } else {
                 // AGREGAR favorito
                 const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/favorites`,
+                    `${API_URL}/api/v1/favorites`,
                     {
                         method: "POST",
                         headers: {

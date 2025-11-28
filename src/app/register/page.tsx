@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/Button"
 import { Mail, ShieldCheck, ArrowLeft } from "lucide-react"
+import { API_URL } from "@/lib/api-config" // ✅ Importar API_URL
+
 
 export default function RegisterPage() {
     const [step, setStep] = useState(1) // 1: Email, 2: Código, 3: Registro
@@ -36,7 +38,6 @@ export default function RegisterPage() {
 
         try {
             // Usa la URL completa del backend (cambia el puerto si es diferente)
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
             const response = await fetch(`${API_URL}/api/v1/customers/send-verification-code`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -66,7 +67,6 @@ export default function RegisterPage() {
         setLoading(true)
 
         try {
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
             const response = await fetch(`${API_URL}/api/v1/customers/verify-code`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -95,8 +95,6 @@ export default function RegisterPage() {
         setLoading(true)
 
         try {
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-
             // 1. Registrar con email verificado
             const registerResponse = await fetch(`${API_URL}/api/v1/customers/register-verified`, {
                 method: "POST",
@@ -130,7 +128,6 @@ export default function RegisterPage() {
         setLoading(true)
 
         try {
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
             const response = await fetch(`${API_URL}/api/v1/customers/send-verification-code`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

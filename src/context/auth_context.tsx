@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
+import { API_URL } from "@/lib/api-config"
 
 interface User {
     _id: string
@@ -55,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             // ✅ Usar endpoint /auth/me en lugar de listar todos los customers
-            const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`, {
+            const userResponse = await fetch(`${API_URL}/api/v1/auth/me`, {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
                 },
@@ -116,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             formData.append("username", email)
             formData.append("password", password)
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth`, {
+            const response = await fetch(`${API_URL}/api/v1/auth`, {
                 method: "POST",
                 body: formData,
             })
@@ -146,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const register = async (email: string, password: string, name: string) => {
         setIsLoading(true)
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/register`, {
+            const response = await fetch(`${API_URL}/api/v1/auth/register`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

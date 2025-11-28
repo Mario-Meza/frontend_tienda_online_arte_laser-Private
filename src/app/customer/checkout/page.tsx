@@ -5,6 +5,7 @@ import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { API_URL } from "@/lib/api-config"
 import { ShoppingBag, Lock, CreditCard, Package, User, Mail, Phone, Home, ArrowLeft, CheckCircle, Truck } from "lucide-react"
 
 interface Product {
@@ -61,7 +62,7 @@ export default function CheckoutPage() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/all`)
+                const response = await fetch(`${API_URL}/api/v1/products/all`)
                 if (response.ok) {
                     const data = await response.json()
                     setProducts(Array.isArray(data) ? data : [])
@@ -169,7 +170,7 @@ export default function CheckoutPage() {
 
             // console.log("Enviando orden:", orderData);
 
-            const orderResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders`, {
+            const orderResponse = await fetch(`${API_URL}/api/v1/orders`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -191,7 +192,7 @@ export default function CheckoutPage() {
             const order = await orderResponse.json()
 
             // --- Continuar con el flujo de Stripe ---
-            const checkoutResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/stripe/checkout/${order._id}`, {
+            const checkoutResponse = await fetch(`${API_URL}/api/v1/stripe/checkout/${order._id}`, {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${token}`,
