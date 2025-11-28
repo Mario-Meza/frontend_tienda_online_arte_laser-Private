@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/context/auth_context"
 import { Card, CardContent } from "@/components/ui/Card"
 import { Button } from "@/components/ui/Button"
+import { API_URL } from "@/api_config"
 
 interface Order {
     id: string
@@ -38,7 +39,7 @@ export function OrdersTab() {
     useEffect(() => {
         const fetchOrders = async () => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders/my-orders`, {
+                const response = await fetch(`${API_URL}/api/v1/orders/my-orders`, {
                     headers: { Authorization: `Bearer ${token}` },
                 })
                 const data = await response.json()

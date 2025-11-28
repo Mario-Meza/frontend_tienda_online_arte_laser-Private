@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+import { API_URL } from "@/api_config"
 
 export async function apiCall(endpoint: string, options: RequestInit & { token?: string } = {}) {
     const { token, ...fetchOptions } = options

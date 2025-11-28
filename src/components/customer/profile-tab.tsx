@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { useState, useEffect } from "react"
 import { Eye, EyeOff, User, Mail, Phone, MapPin, Lock, Home, Navigation } from 'lucide-react'
+import { API_URL } from "@/api_config"
 
 type NotificationType = 'success' | 'error' | 'info'
 
@@ -165,7 +166,7 @@ export function ProfileTab() {
             console.log("Enviando datos:", updatePayload); // Para debug
 
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/${user?._id}`,
+                `${API_URL}/api/v1/customers/${user?._id}`,
                 {
                     method: "PUT",
                     headers: {
@@ -202,7 +203,7 @@ export function ProfileTab() {
         setLoading(true)
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/${user?._id}/change-password`,
+                `${API_URL}/api/v1/customers/${user?._id}/change-password`,
                 {
                     method: "PUT",
                     headers: {

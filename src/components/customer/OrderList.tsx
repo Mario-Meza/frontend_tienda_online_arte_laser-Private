@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/context/auth_context"
 import { Package, Truck, CheckCircle, XCircle, Clock, Eye, X, AlertCircle, RefreshCw } from "lucide-react"
 import Link from "next/link"
-
+import { API_URL } from "@/api_config"
 
 
 interface Address {
@@ -155,7 +155,7 @@ export function OrdersList({ showHeader = true, maxOrders, showCanceled = false 
 
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/me`,
+                `${API_URL}/api/v1/customers/me`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -174,7 +174,7 @@ export function OrdersList({ showHeader = true, maxOrders, showCanceled = false 
 
     const fetchProducts = async () => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/all`)
+            const response = await fetch(`${API_URL}/api/v1/products/all`)
             if (!response.ok) throw new Error("Error al cargar productos")
 
             const productsData: Product[] = await response.json()
@@ -197,7 +197,7 @@ export function OrdersList({ showHeader = true, maxOrders, showCanceled = false 
         setError(null)
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders`, {
+            const response = await fetch(`${API_URL}/api/v1/orders`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -265,7 +265,7 @@ export function OrdersList({ showHeader = true, maxOrders, showCanceled = false 
         setCanceling(true)
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders/${selectedOrder._id}`,
+                `${API_URL}/api/v1/orders/${selectedOrder._id}`,
                 {
                     method: "PATCH",
                     headers: {
