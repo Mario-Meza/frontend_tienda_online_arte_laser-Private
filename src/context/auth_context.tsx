@@ -2,8 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
-import { API_URL } from "@/lib/api-config"
-import { cn } from "@/lib/utils"
+import { API_URL } from "@/api_config"
 
 interface User {
     _id: string

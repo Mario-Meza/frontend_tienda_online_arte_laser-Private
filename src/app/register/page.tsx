@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/Button"
 import { Mail, ShieldCheck, ArrowLeft } from "lucide-react"
-import { API_URL } from "@/lib/api-config" // ✅ Importar API_URL
+import { API_URL } from "@/api_config"
 
 
 export default function RegisterPage() {

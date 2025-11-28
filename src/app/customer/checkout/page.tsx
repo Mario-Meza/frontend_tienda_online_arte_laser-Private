@@ -5,7 +5,8 @@ import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { API_URL } from "@/lib/api-config"
+import { API_URL } from "@/api_config"
+
 import { ShoppingBag, Lock, CreditCard, Package, User, Mail, Phone, Home, ArrowLeft, CheckCircle, Truck } from "lucide-react"
 
 interface Product {

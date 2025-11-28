@@ -6,7 +6,7 @@ import { AdminRoute } from "@/components/shared/AdminRoute"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { Search, Plus, Edit, Trash2, Image as ImageIcon, Star, Upload } from "lucide-react"
-
+import { API_URL } from "@/api_config"
 interface Product {
     _id: string
     name: string
@@ -83,7 +83,7 @@ export default function AdminProductsPage() {
         setLoading(true)
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/all`
+                `${API_URL}/api/v1/products/all`
             )
 
             if (!response.ok) throw new Error("Error al cargar productos")
@@ -181,7 +181,7 @@ export default function AdminProductsPage() {
             })
 
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/upload/images`,
+                `${API_URL}/api/v1/upload/images`,
                 {
                     method: "POST",
                     headers: {
@@ -276,7 +276,7 @@ export default function AdminProductsPage() {
     const createProduct = async () => {
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/`,
+                `${API_URL}/api/v1/products/`,
                 {
                     method: "POST",
                     headers: {
@@ -306,7 +306,7 @@ export default function AdminProductsPage() {
 
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/${selectedProduct._id}`,
+                `${API_URL}/api/v1/products/${selectedProduct._id}`,
                 {
                     method: "PUT",
                     headers: {
@@ -346,7 +346,7 @@ export default function AdminProductsPage() {
 
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/${productToDelete._id}`,
+                `${API_URL}/api/v1/products/${productToDelete._id}`,
                 {
                     method: "DELETE",
                     headers: {

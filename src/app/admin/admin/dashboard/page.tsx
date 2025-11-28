@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/context/auth_context"
 import { AdminRoute } from "@/components/shared/AdminRoute"
 import Link from "next/link"
+import { API_URL } from "@/api_config"
+
 
 interface Stats {
     totalProducts: number
@@ -28,19 +30,19 @@ export default function AdminDashboard() {
         const fetchStats = async () => {
             try {
                 // Obtener productos
-                const productsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/all`, {
+                const productsRes = await fetch(`${API_URL}/api/v1/products/all`, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 const products = await productsRes.json()
 
                 // Obtener órdenes
-                const ordersRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders`, {
+                const ordersRes = await fetch(`${API_URL}/api/v1/orders`, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 const orders = await ordersRes.json()
 
                 // Obtener clientes
-                const customersRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers`, {
+                const customersRes = await fetch(`${API_URL}/api/v1/customers`, {
                     headers: { Authorization: `Bearer ${token}` }
                 })
                 const customers = await customersRes.json()

@@ -9,7 +9,7 @@ import { StarRating } from "@/components/ui/Stars"
 import { Heart } from 'lucide-react'
 import { HeroSlider } from "@/components/ui/hero-slider"
 import { Footer } from "@/components/ui/footer"
-import { API_URL } from "@/lib/api-config"
+import { API_URL } from "@/api_config"
 
 interface Product {
     _id: string

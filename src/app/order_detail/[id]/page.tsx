@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/context/auth_context"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
-import { API_URL } from "@/lib/api-config"
+import { API_URL } from "@/api_config"
 
 
 interface OrderDetail {

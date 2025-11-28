@@ -6,6 +6,7 @@ import { AdminRoute } from "@/components/shared/AdminRoute"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { Search, Plus, Edit, Trash2, Mail, Phone, MapPin, User, Eye, EyeOff } from 'lucide-react'
+import { API_URL } from "@/api_config"
 
 interface Address {
     street?: string;
@@ -90,7 +91,7 @@ export default function AdminCustomersPage() {
         setLoading(true)
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers`,
+                `${API_URL}/api/v1/customers`,
                 {
                     headers: {
                         "Authorization": `Bearer ${token}`
@@ -286,7 +287,7 @@ export default function AdminCustomersPage() {
             } : undefined
 
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/admin/create-with-role?role=${formData.role}`,
+                `${API_URL}/api/v1/customers/admin/create-with-role?role=${formData.role}`,
                 {
                     method: "POST",
                     headers: {
@@ -320,7 +321,7 @@ export default function AdminCustomersPage() {
     const adminResetPassword = async (customerId: string, newPassword: string) => {
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/${customerId}/admin/reset-password`,
+                `${API_URL}/api/v1/customers/${customerId}/admin/reset-password`,
                 {
                     method: "PUT",
                     headers: {
@@ -378,7 +379,7 @@ export default function AdminCustomersPage() {
             // Solo realizar la llamada PUT si hay campos generales que actualizar
             if (hasGeneralUpdates) {
                 const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/${selectedCustomer._id}`,
+                    `${API_URL}/api/v1/customers/${selectedCustomer._id}`,
                     {
                         method: "PUT",
                         headers: {
@@ -422,7 +423,7 @@ export default function AdminCustomersPage() {
     const updateCustomerRole = async (customerId: string, newRole: string) => {
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/${customerId}/role?new_role=${newRole}`,
+                `${API_URL}/api/v1/customers/${customerId}/role?new_role=${newRole}`,
                 {
                     method: "PATCH",
                     headers: {
@@ -454,7 +455,7 @@ export default function AdminCustomersPage() {
 
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/customers/${customerToDelete._id}`,
+                `${API_URL}/api/v1/customers/${customerToDelete._id}`,
                 {
                     method: "DELETE",
                     headers: {

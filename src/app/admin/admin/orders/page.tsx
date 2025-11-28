@@ -8,7 +8,7 @@ import {
     Calendar, DollarSign, X, User, MapPin, ShoppingBag, AlertCircle, Phone, Mail, Navigation
 } from "lucide-react"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+import { API_URL } from "@/api_config"
 
 interface Address {
     street?: string
@@ -130,7 +130,7 @@ export default function AdminOrdersPage() {
             // Obtener datos del customer
             let customerData: Customer | null = null
             try {
-                const customerRes = await fetch(`${API_BASE_URL}/api/v1/customers/public/${order.customer_id}`)
+                const customerRes = await fetch(`${API_URL}/api/v1/customers/public/${order.customer_id}`)
                 if (customerRes.ok) {
                     customerData = await customerRes.json()
                 }
@@ -158,7 +158,7 @@ export default function AdminOrdersPage() {
             const enrichedDetails = await Promise.all(
                 order.details.map(async (detail: OrderDetail) => {
                     try {
-                        const productRes = await fetch(`${API_BASE_URL}/api/v1/products/${detail.product_id}`)
+                        const productRes = await fetch(`${API_URL}/api/v1/products/${detail.product_id}`)
                         const productData = productRes.ok ? await productRes.json() : null
 
                         return {
@@ -212,15 +212,15 @@ export default function AdminOrdersPage() {
         setError(null)
 
         try {
-            let url = `${API_BASE_URL}/api/v1/orders/`
+            let url = `${API_URL}/api/v1/orders/`
             const params = new URLSearchParams()
 
             if (statusFilter !== "all") {
-                url = `${API_BASE_URL}/api/v1/orders/filter/status/${statusFilter}`
+                url = `${API_URL}/api/v1/orders/filter/status/${statusFilter}`
             }
 
             if (minTotal || maxTotal) {
-                url = `${API_BASE_URL}/api/v1/orders/filter/total`
+                url = `${API_URL}/api/v1/orders/filter/total`
                 if (minTotal) params.append('min_total', minTotal)
                 if (maxTotal) params.append('max_total', maxTotal)
             }
@@ -389,7 +389,7 @@ export default function AdminOrdersPage() {
 
             console.log(`🔄 Actualizando orden ${orderId} a estado: ${newStatus}`)
 
-            const response = await fetch(`${API_BASE_URL}/api/v1/orders/${orderId}`, {
+            const response = await fetch(`${API_URL}/api/v1/orders/${orderId}`, {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -432,7 +432,7 @@ export default function AdminOrdersPage() {
         setActiveTab('details')
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/v1/orders/${order._id}`, {
+            const response = await fetch(`${API_URL}/api/v1/orders/${order._id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

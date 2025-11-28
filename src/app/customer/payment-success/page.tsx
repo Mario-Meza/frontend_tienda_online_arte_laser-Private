@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useAuth } from "@/context/auth_context"
 import { CheckCircle, Package, Truck, CreditCard, Calendar, Home } from "lucide-react"
-import { API_URL } from "@/lib/api-config"
+import { API_URL } from "@/api_config"
 
 interface OrderDetails {
     _id: string

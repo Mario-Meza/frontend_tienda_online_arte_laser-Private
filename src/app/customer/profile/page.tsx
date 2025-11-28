@@ -4,7 +4,7 @@ import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Button, LinkButton } from "@/components/ui/Button"
-import { API_URL } from "@/lib/api-config"
+import { API_URL } from "@/api_config"
 
 export default function ProfilePage() {
     const router = useRouter()

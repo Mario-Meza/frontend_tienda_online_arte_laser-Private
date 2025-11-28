@@ -5,7 +5,7 @@ import { useCart } from "@/context/cart-context"
 import { useAuth } from "@/context/auth_context"
 import { useRouter } from "next/navigation"
 import { Button, LinkButton } from "@/components/ui/Button"
-import { API_URL } from "@/lib/api-config"
+import { API_URL } from "@/api_config"
 
 interface Product {
     _id: string
