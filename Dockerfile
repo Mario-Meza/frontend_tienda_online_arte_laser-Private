@@ -21,7 +21,7 @@ RUN npm ci
 COPY src ./src
 COPY public ./public
 COPY tsconfig.json ./tsconfig.json
-COPY next.config.js ./next.config.js
+COPY next.config.ts ./next.config.ts
 COPY middleware.ts ./middleware.ts
 
 # Configura las variables de entorno para el build
