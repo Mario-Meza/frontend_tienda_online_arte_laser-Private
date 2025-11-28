@@ -24,7 +24,6 @@ COPY tsconfig.json ./tsconfig.json
 COPY next.config.js ./next.config.js
 COPY middleware.ts ./middleware.ts
 COPY .env.local ./.env.local
-COPY next-env.d.ts ./next-env.d.ts
 
 # Configura las variables de entorno para el build
 ARG NEXT_PUBLIC_API_URL
