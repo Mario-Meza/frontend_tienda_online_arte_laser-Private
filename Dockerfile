@@ -53,8 +53,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 USER nextjs
 
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
 EXPOSE ${PORT}
 
 # Ejecuta el servidor standalone
