@@ -1,59 +1,66 @@
-# 1. ETAPA DE CONSTRUCCIÓN (BUILDER)
-FROM node:20-slim AS builder
-
-# Instala dependencias del sistema necesarias para compilar módulos nativos
-RUN apt-get update && apt-get install -y \
-    python3 \
-    make \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
-
+# ========================================
+# ETAPA 1: DEPENDENCIAS
+# ========================================
+FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Copia archivos de dependencias
-COPY package.json package-lock.json ./
+# Instalar dependencias del sistema para módulos nativos
+RUN apk add --no-cache libc6-compat
 
-# Instala dependencias
+# Copiar archivos de dependencias
+COPY package.json package-lock.json* ./
+
+# Instalar dependencias
 RUN npm ci
 
-# Copia el código fuente
-# Copia TODOS los archivos fuente y de configuración de la raíz:
-COPY src ./src
-COPY public ./public
-COPY tsconfig.json ./tsconfig.json
-COPY next.config.ts ./next.config.ts
-COPY middleware.ts ./middleware.ts
 
-# Configura las variables de entorno para el build
+# ========================================
+# ETAPA 2: BUILDER
+# ========================================
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Copiar dependencias instaladas
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copiar código fuente
+COPY . .
+
+# Variables de build (Railway las pasa automáticamente)
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build con output standalone
+# Build de Next.js
 RUN npm run build
 
 
-# 2. ETAPA DE PRODUCCIÓN (RUNNER) - Súper ligera
-FROM node:20-slim AS runner
-
+# ========================================
+# ETAPA 3: RUNNER (Producción)
+# ========================================
+FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Crea usuario no-root
+# Crear usuario no-root
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copia solo lo necesario del build standalone
+# Copiar archivos necesarios del builder
+COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 USER nextjs
 
+# Railway asigna el puerto dinámicamente
+# Usa $PORT de Railway, por defecto 3000
 ENV PORT=3000
-EXPOSE ${PORT}
+ENV HOSTNAME="0.0.0.0"
 
-# Ejecuta el servidor standalone
+EXPOSE 3000
+
+# Comando de inicio
 CMD ["node", "server.js"]

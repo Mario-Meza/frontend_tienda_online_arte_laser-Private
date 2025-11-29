@@ -1,9 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+    // 🔥 CRÍTICO: Habilita el modo standalone para Docker
     output: 'standalone',
 
-    // Deshabilita ESLint y TypeScript durante el build (solo para producción)
+    // Deshabilita ESLint y TypeScript durante el build
     eslint: {
         ignoreDuringBuilds: true,
     },
@@ -11,16 +12,22 @@ const nextConfig: NextConfig = {
         ignoreBuildErrors: true,
     },
 
-    async rewrites() {
-        return [
+    // Opcional: Configuración de imágenes si usas next/image
+    images: {
+        remotePatterns: [
             {
-                source: '/api/:path*',
-                // En producción, esto debería apuntar al servicio de API en Docker
-                // Si la API está en el mismo docker-compose, usa: http://api:8000/api/:path*
-                destination: process.env.API_INTERNAL_URL || 'http://localhost:8000/api/:path*',
+                protocol: 'https',
+                hostname: 'apitiendaonlineartelaser-production.up.railway.app',
             },
-        ]
+            {
+                protocol: 'http',
+                hostname: 'localhost',
+            },
+        ],
     },
-}
+
+    // ❌ NO uses rewrites cuando usas NEXT_PUBLIC_API_URL
+    // Los rewrites son para hacer proxy, pero tu api_config.ts ya maneja las URLs directamente
+};
 
 export default nextConfig;
