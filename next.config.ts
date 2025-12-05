@@ -24,6 +24,10 @@ const nextConfig: NextConfig = {
                 hostname: 'localhost',
             },
         ],
+        unoptimized: true, // ✅ Deshabilita optimización
+    },
+    env: {
+        NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     },
 
     // ❌ NO uses rewrites cuando usas NEXT_PUBLIC_API_URL
