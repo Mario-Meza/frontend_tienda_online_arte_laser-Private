@@ -1,2 +1,6 @@
+[build]
+  command = "next build --turbopack"
+  publish = ".next"
+
 [build.environment]
-NEXT_PUBLIC_API_URL = "https://apitiendaonlineartelaser-production.up.railway.app"
+  NEXT_PUBLIC_API_URL = "https://apitiendaonlineartelaser-production.up.railway.app"
