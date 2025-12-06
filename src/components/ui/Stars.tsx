@@ -11,7 +11,6 @@ export const StarRating = ({ value }: { value: number }) => {
             {stars.map(star => (
                 <svg
                     key={star}
-                    xmlns="http://www.w3.org/2000/svg"
                     fill={star <= value ? "gold" : "none"}
                     viewBox="0 0 24 24"
                     strokeWidth={1.5}

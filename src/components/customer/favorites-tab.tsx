@@ -7,6 +7,7 @@ import { useCart } from "@/context/cart-context"
 import { Heart, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { StarRating } from "@/components/ui/Stars"
+import { API_URL } from "@/api_config"
 
 interface Product {
     _id: string
@@ -54,7 +55,7 @@ export function FavoritesTab() {
             setError(null)
             try {
                 const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/favorites`,
+                    `${API_URL}/api/v1/favorites`,
                     {
                         headers: {
                             "Authorization": `Bearer ${token}`
@@ -69,7 +70,7 @@ export function FavoritesTab() {
                 // Cargar información de productos
                 if (data.length > 0) {
                     const productPromises = data.map((fav: Favorite) =>
-                        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/products/${fav.product_id}`)
+                        fetch(`${API_URL}/api/v1/products/${fav.product_id}`)
                             .then(res => res.ok ? res.json() : null)
                             .catch(err => {
                                 console.error(`Error cargando producto ${fav.product_id}:`, err)
@@ -104,7 +105,7 @@ export function FavoritesTab() {
     useEffect(() => {
         const fetchRatings = async () => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/rating`)
+                const response = await fetch(`${API_URL}/api/v1/rating`)
                 if (!response.ok) return
 
                 const data = await response.json()
@@ -132,7 +133,7 @@ export function FavoritesTab() {
         setRemovingId(productId)
         try {
             const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/v1/favorites/product/${productId}`,
+                `${API_URL}/api/v1/favorites/product/${productId}`,
                 {
                     method: "DELETE",
                     headers: {
