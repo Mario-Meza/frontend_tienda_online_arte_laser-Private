@@ -11,7 +11,8 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-          NEXT_PUBLIC_API_URL: http://localhost:8000
+          # ✅ HTTPS para Railway
+          NEXT_PUBLIC_API_URL: https://apitiendaonlineartelaser-production.up.railway.app
     container_name: nextjs_frontend
     ports:
       - "3000:3000"
@@ -20,13 +21,8 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: "0.0.0.0"
-      # URL de la API que consumirá el frontend
-      # 🔥 IMPORTANTE: Si la API está en Docker, usa el nombre del servicio
-      # Si la API está fuera de Docker (host), usa host.docker.internal
-      NEXT_PUBLIC_API_URL: http://localhost:8000
-    # Si necesitas comunicación con otros servicios en Docker
-    # depends_on:
-    #   - api
+      # ✅ HTTPS para Railway - Esta es la variable que usa el frontend
+      NEXT_PUBLIC_API_URL: https://apitiendaonlineartelaser-production.up.railway.app
     restart: always
     # Si la API está en el mismo docker-compose, puedes usar networking
     # networks:
